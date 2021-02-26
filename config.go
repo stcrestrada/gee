@@ -104,7 +104,7 @@ func GeePullAll(repo Repo) (*CommandOutput, error) {
 		return nil, err
 	}
 
-	if string(mainBranch) == string(currentBranch) {
+	if string(mainBranch) != string(currentBranch) {
 		err = fmt.Errorf("skipping, cannot update repo, %s must checkout to %s", repo.Name, mainBranch)
 		return nil, err
 	}
@@ -121,32 +121,40 @@ func GeePullAll(repo Repo) (*CommandOutput, error) {
 	}, nil
 }
 
-func main() {
+func loadConfig() (*Config, error) {
 	conf := Config{}
 	config, err := toml.LoadFile("gee.toml")
 	if err != nil {
-		fmt.Println("Error ", err.Error())
-		return
+		return nil, err
 	}
 
 	err = config.Unmarshal(&conf)
 	if err != nil {
-		fmt.Println("Error: Cannot unmarshal conf ", err.Error())
+		return nil, err
 	}
 
 	// validate that config has necessary fields
 	err = validate.Struct(&conf)
 	if err != nil {
-		print("Error ", err.Error())
+		return nil, err
 	}
 
+	return &conf, err
+}
+
+func main() {
+	config, err := loadConfig()
+	if err != nil {
+		CheckIfError(err)
+		return
+	}
 	app.Commands = []*cli.Command{
 		{
 			Name:  "pull",
 			Usage: "Git pull and update all repos",
 			Action: func(c *cli.Context) error {
-				concurrency := 2
-				repos := conf.Repos
+				concurrency := 3
+				repos := config.Repos
 				pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
 					repo := repos[i]
 					return func() (interface{}, error) {
@@ -173,7 +181,7 @@ func main() {
 			Usage: "Git status of all repos",
 			Action: func(c *cli.Context) error {
 				concurrency := 2
-				repos := conf.Repos
+				repos := config.Repos
 				pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
 					repo := repos[i]
 					return func() (interface{}, error) {
@@ -197,7 +205,11 @@ func main() {
 	}
 
 	// Run the CLI app
-	app.Run(os.Args)
+	err = app.Run(os.Args)
+	if err != nil {
+		CheckIfError(err)
+		return
+	}
 
 }
 
