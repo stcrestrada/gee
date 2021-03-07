@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pelletier/go-toml"
+	"github.com/thoas/go-funk"
 )
 
 func loadToml() (*toml.Tree, error) {
@@ -25,7 +26,7 @@ func setConfig(config toml.Tree) (*Config, error) {
 		return nil, err
 	}
 	if len(conf.Repos) == 0 {
-		err = errors.New("No repos. Use gee add to add repos to gee.toml")
+		err = errors.New("No repos. Use gee add to insert repos to gee.toml")
 		return &Config{
 			Repos: nil,
 		}, err
@@ -37,4 +38,8 @@ func setConfig(config toml.Tree) (*Config, error) {
 	}
 
 	return &conf, err
+}
+
+func containsArg(args []string, elem string) bool {
+	return funk.Contains(args, elem)
 }

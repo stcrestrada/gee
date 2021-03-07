@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/fatih/color"
 )
 
 func Info(format string, args ...interface{}) {
@@ -21,5 +23,6 @@ func CheckIfError(err error) {
 
 // Warning should be used to display a warning
 func Warning(format string, args ...interface{}) {
-	fmt.Printf("\x1b[36;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+	c := color.New(color.FgYellow, color.Bold)
+	c.Printf("%s \n", fmt.Sprintf(format, args...))
 }

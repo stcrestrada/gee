@@ -101,7 +101,6 @@ func WriteRepoToConfig(config *Config, cd string, err error) error {
 		}
 		Info("Successfully added repo in %s", cd)
 	} else {
-		println("are we hitting this else statement, we shouldn't be")
 		if config != nil && len(config.Repos) > 0 {
 			err = nil // set error to nil since it validating an error we do not want, this is weird workaround
 			err = repoExists(config.Repos, name)

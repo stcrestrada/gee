@@ -18,8 +18,12 @@ var validate *validator.Validate
 func main() {
 	configTree, err := loadToml()
 	if err != nil {
-		Warning("%s", err)
-		Info("Run gee init")
+		// skip displaying this loggers when the user calls init
+		if !containsArg(os.Args, "init") {
+			Warning("%s", err)
+			Info("Run gee init")
+		}
+
 		initCmd := initCommand()
 		app.Commands = append(app.Commands, initCmd)
 		err = app.Run(os.Args)
@@ -31,8 +35,10 @@ func main() {
 	}
 	config, err := setConfig(*configTree)
 	if err != nil {
+		if !containsArg(os.Args, "add") {
+			Warning(fmt.Sprintf("%s \n", err))
+		}
 		addCmd := addCommand()
-		Warning(fmt.Sprintf("%s \n", err))
 		app.Commands = append(app.Commands, addCmd)
 		err = app.Run(os.Args)
 		if err != nil {
@@ -42,8 +48,8 @@ func main() {
 		return
 	}
 	app.Commands = []*cli.Command{
-		addCommand(),
 		initCommand(),
+		addCommand(),
 		pullCommand(config),
 		statusCommand(config),
 	}

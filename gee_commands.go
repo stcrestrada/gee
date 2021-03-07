@@ -111,7 +111,7 @@ func GeeInit() error {
 	}
 	if err == nil {
 		Info("Gee initialized. You can  now add repos to gee.toml, located at %s. \n", homeDir)
-		Info("To automate adding repos to gee.toml, use gee add . inside of a git initialized repo.")
+		Info("To automate adding repos to gee.toml, use gee add inside of a git initialized repo.")
 		return err
 	}
 	return err
