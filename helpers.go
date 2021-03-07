@@ -1,12 +1,16 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
+
+	"github.com/pelletier/go-toml"
 )
 
 const TEMPDIR = "/tmp"
@@ -63,7 +67,7 @@ func GetLastCommitFromTempFile(repo Repo) (string, error) {
 func GetHomeDir() string {
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatal( err )
+		log.Fatal(err)
 	}
 	return usr.HomeDir
 }
@@ -73,5 +77,69 @@ func FileExists(name string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
-	return err != nil, err
+	return err == nil, err
+}
+
+func WriteRepoToConfig(config *Config, cd string, err error) error {
+	directories := strings.Split(cd, "/")
+	name := directories[len(directories)-1]
+	geePath := getGeePath()
+
+	if err != nil && config != nil {
+		err = nil // set error to nil since it validating an error we do not want, this is weird workaround
+		config.Repos = append(config.Repos, Repo{
+			Name: name,
+			Path: cd,
+		})
+		result, err := toml.Marshal(config)
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(geePath, result, 0755)
+		if err != nil {
+			return err
+		}
+		Info("Successfully added repo in %s", cd)
+	} else {
+		println("are we hitting this else statement, we shouldn't be")
+		if config != nil && len(config.Repos) > 0 {
+			err = nil // set error to nil since it validating an error we do not want, this is weird workaround
+			err = repoExists(config.Repos, name)
+			if err != nil {
+				return err
+			}
+
+			config.Repos = append(config.Repos, Repo{
+				Name: name,
+				Path: cd,
+			})
+			result, err := toml.Marshal(config)
+			if err != nil {
+				return err
+			}
+			err = ioutil.WriteFile(geePath, result, 0755)
+			if err != nil {
+				return err
+			}
+			Info("Successfully added repo in %s", cd)
+		}
+	}
+
+	return err
+}
+
+func repoExists(repos []Repo, name string) error {
+	var err error
+	for _, repo := range repos {
+		if repo.Name == name {
+			err = errors.New("Repo Already Added.")
+			break
+		}
+		continue
+	}
+	return err
+}
+
+func getGeePath() string {
+	return fmt.Sprintf("%s/%s", GetHomeDir(), "gee.toml")
 }

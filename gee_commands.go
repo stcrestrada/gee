@@ -70,7 +70,6 @@ func GeePullAll(repo Repo) (*CommandOutput, error) {
 	}, err
 }
 
-
 func GeeInit() error {
 	// create gee.toml
 	// create .gee/gee.json
@@ -98,8 +97,8 @@ func GeeInit() error {
 	}
 
 	path := fmt.Sprintf("%s/%s", cd, ".gee/")
-	_, err = os.Stat(path)
-	if os.IsNotExist(err) {
+	exists, err = FileExists(path)
+	if !exists {
 		err = os.Mkdir(".gee", 0755)
 		if err != nil {
 			return err
@@ -112,12 +111,24 @@ func GeeInit() error {
 	}
 	if err == nil {
 		Info("Gee initialized. You can  now add repos to gee.toml, located at %s. \n", homeDir)
-		Info("To automate adding repos to gee.toml, use gee install inside of a git initialized repo.")
+		Info("To automate adding repos to gee.toml, use gee add . inside of a git initialized repo.")
+		return err
 	}
 	return err
 }
 
-func GeeInstall() error {
-	Info("install in")
-	return nil
+func GeeAdd() error {
+	cd, err := os.Getwd()
+	exists, err := FileExists(".git")
+	if !exists {
+		Warning("Not a git initialize repo, .git dir does not exist")
+		return err
+	}
+	config, err := loadToml()
+	if err != nil {
+		return err
+	}
+	conf, err := setConfig(*config)
+	err = WriteRepoToConfig(conf, cd, err)
+	return err
 }

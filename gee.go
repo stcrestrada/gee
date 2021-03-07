@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/stcrestrada/gogo"
 	"github.com/urfave/cli/v2"
 )
 
@@ -14,27 +13,6 @@ var (
 )
 var validate *validator.Validate
 
-func initCommand () *cli.Command {
-	return &cli.Command{
-		Name:  "init",
-		Usage: "initialize gee directory and toml file",
-		Action: func(context *cli.Context) error {
-			err := GeeInit()
-			return err
-		},
-	}
-}
-
-func installCommand () *cli.Command {
-	return &cli.Command{
-		Name:  "install",
-		Usage: "add repo to gee.toml",
-		Action: func(context *cli.Context) error {
-			err := GeeInstall()
-			return err
-		},
-	}
-}
 
 
 func main() {
@@ -53,9 +31,9 @@ func main() {
 	}
 	config, err := setConfig(*configTree)
 	if err != nil {
-		installCmd := installCommand()
+		addCmd := addCommand()
 		Warning(fmt.Sprintf("%s \n", err))
-		app.Commands = append(app.Commands, installCmd)
+		app.Commands = append(app.Commands, addCmd)
 		err = app.Run(os.Args)
 		if err != nil {
 			CheckIfError(err)
@@ -64,71 +42,10 @@ func main() {
 		return
 	}
 	app.Commands = []*cli.Command{
-		{
-			Name:  "init",
-			Usage: "initialize gee directory and toml file",
-			Action: func(context *cli.Context) error {
-				err := GeeInit()
-				return err
-			},
-		},
-		{
-			Name:  "pull",
-			Usage: "Git pull and update all repos",
-			Action: func(c *cli.Context) error {
-				concurrency := len(config.Repos)
-				repos := config.Repos
-				pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
-					repo := repos[i]
-					return func() (interface{}, error) {
-						output, err := GeePullAll(repo)
-						return output, err
-					}
-				})
-				outputFeed := pool.Go()
-				for res := range outputFeed {
-					if res.Error == nil {
-						cmdOutput := res.Result.(*CommandOutput)
-						if cmdOutput.Warning {
-							Warning(string(cmdOutput.Output))
-						} else {
-							Info("Pulling Repo %s \n", cmdOutput.Repo)
-							println(string(cmdOutput.Output))
-							Info("Finished pulling %s \n", cmdOutput.Repo)
-						}
-						continue
-					}
-					Warning(res.Error.Error())
-				}
-				return nil
-			},
-		},
-		{
-			Name:  "status",
-			Usage: "Git status of all repos",
-			Action: func(c *cli.Context) error {
-				concurrency := len(config.Repos)
-				repos := config.Repos
-				pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
-					repo := repos[i]
-					return func() (interface{}, error) {
-						output, err := GeeStatusAll(repo)
-						return output, err
-					}
-				})
-				feed := pool.Go()
-				for res := range feed {
-					if res.Error == nil {
-						cmdOutput := res.Result.(*CommandOutput)
-						Info("Status of %s \n", cmdOutput.Repo)
-						println(string(cmdOutput.Output))
-						continue
-					}
-					Warning(res.Error.Error())
-				}
-				return nil
-			},
-		},
+		addCommand(),
+		initCommand(),
+		pullCommand(config),
+		statusCommand(config),
 	}
 
 	// Run the CLI app
