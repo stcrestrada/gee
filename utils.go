@@ -25,7 +25,7 @@ func setConfig(config toml.Tree) (*Config, error) {
 		return nil, err
 	}
 	if len(conf.Repos) == 0 {
-		err = errors.New("Add repos to toml")
+		err = errors.New("No repos. Use gee install to add repos to gee.toml")
 		return nil, err
 	}
 	// validate that config has necessary fields

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/go-playground/validator/v10"
@@ -13,16 +14,53 @@ var (
 )
 var validate *validator.Validate
 
+func initCommand () *cli.Command {
+	return &cli.Command{
+		Name:  "init",
+		Usage: "initialize gee directory and toml file",
+		Action: func(context *cli.Context) error {
+			err := GeeInit()
+			return err
+		},
+	}
+}
+
+func installCommand () *cli.Command {
+	return &cli.Command{
+		Name:  "install",
+		Usage: "add repo to gee.toml",
+		Action: func(context *cli.Context) error {
+			err := GeeInstall()
+			return err
+		},
+	}
+}
+
+
 func main() {
 	configTree, err := loadToml()
 	if err != nil {
 		Warning("%s", err)
 		Info("Run gee init")
+		initCmd := initCommand()
+		app.Commands = append(app.Commands, initCmd)
+		err = app.Run(os.Args)
+		if err != nil {
+			CheckIfError(err)
+			return
+		}
 		return
 	}
 	config, err := setConfig(*configTree)
 	if err != nil {
-		CheckIfError(err)
+		installCmd := installCommand()
+		Warning(fmt.Sprintf("%s \n", err))
+		app.Commands = append(app.Commands, installCmd)
+		err = app.Run(os.Args)
+		if err != nil {
+			CheckIfError(err)
+			return
+		}
 		return
 	}
 	app.Commands = []*cli.Command{

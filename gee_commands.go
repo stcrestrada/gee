@@ -110,5 +110,14 @@ func GeeInit() error {
 		_, err = os.Create("gee.json")
 
 	}
+	if err == nil {
+		Info("Gee initialized. You can  now add repos to gee.toml, located at %s. \n", homeDir)
+		Info("To automate adding repos to gee.toml, use gee install inside of a git initialized repo.")
+	}
 	return err
+}
+
+func GeeInstall() error {
+	Info("install in")
+	return nil
 }
