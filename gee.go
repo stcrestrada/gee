@@ -18,7 +18,7 @@ var validate *validator.Validate
 func main() {
 	configTree, err := loadToml()
 	if err != nil {
-		// skip displaying this loggers when the user calls init
+		// skip displaying these loggers when the user calls init
 		if !containsArg(os.Args, "init") {
 			Warning("%s", err)
 			Info("Run gee init")
@@ -35,6 +35,7 @@ func main() {
 	}
 	config, err := setConfig(*configTree)
 	if err != nil {
+		// skip displaying these loggers when the user calls add
 		if !containsArg(os.Args, "add") {
 			Warning(fmt.Sprintf("%s \n", err))
 		}
