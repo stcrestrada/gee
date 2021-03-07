@@ -3,6 +3,6 @@
 ### install
 
 ```
-brew install gee
+WIP will publish to brew soon
 ```
 
