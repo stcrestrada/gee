@@ -9,7 +9,7 @@ import (
 
 func Info(format string, args ...interface{}) {
 	c := color.New(color.FgGreen, color.Bold)
-	c.Printf("%s", fmt.Sprintf(format, args...))
+	c.Printf("%s\n", fmt.Sprintf(format, args...))
 }
 
 // CheckIfError should be used to naively panic if an error is not nil.
@@ -25,5 +25,5 @@ func CheckIfError(err error) {
 // Warning should be used to display a warning
 func Warning(format string, args ...interface{}) {
 	c := color.New(color.FgYellow, color.Bold)
-	c.Printf("%s \n", fmt.Sprintf(format, args...))
+	c.Printf("%s\n", fmt.Sprintf(format, args...))
 }
