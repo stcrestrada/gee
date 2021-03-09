@@ -31,7 +31,7 @@ func (c *GitCommand) MainBranch() ([]byte, error) {
 }
 
 func (c *GitCommand) Status() ([]byte, error) {
-	cmd := exec.Command("git", "status")
+	cmd := exec.Command("git", "-c", "color.status=always", "status")
 	cmd.Dir = c.Dir
 	output, err := cmd.Output()
 
