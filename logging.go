@@ -8,16 +8,17 @@ import (
 )
 
 func Info(format string, args ...interface{}) {
-	fmt.Printf("\x1b[34;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+	c := color.New(color.FgGreen, color.Bold)
+	c.Printf("%s", fmt.Sprintf(format, args...))
 }
 
-// CheckIfError should be used to naively panics if an error is not nil.
+// CheckIfError should be used to naively panic if an error is not nil.
 func CheckIfError(err error) {
 	if err == nil {
 		return
 	}
-
-	fmt.Printf("\x1b[31;1m%s\x1b[0m\n", fmt.Sprintf("error: %s", err))
+	c := color.New(color.FgHiRed, color.Bold)
+	c.Printf("%s\n", fmt.Sprintf("error: %s", err))
 	os.Exit(1)
 }
 
