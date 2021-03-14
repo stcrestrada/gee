@@ -1,68 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
-	"path/filepath"
 	"strings"
 
 	"github.com/pelletier/go-toml"
 )
-
-const TEMPDIR = "/tmp"
-
-func WriteCommitToTmpDir() {
-	file, err := ioutil.TempFile("tmp", "cloudsynth.6771d542e3ab9b716908130a49d350db5123d39c.*")
-	if err != nil {
-		log.Fatal(err)
-	}
-	file2, err := ioutil.TempFile("tmp", "gee.6771d542e3ab9b716908130a49d350db5123d39c.*")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.Remove(file.Name())
-	defer os.Remove(file2.Name())
-}
-
-func GetLastCommitFromTempFile(repo Repo) (string, error) {
-	var files []string
-	var lastCommit string
-
-	os.Chdir(TEMPDIR)
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	err = filepath.Walk(wd, func(path string, info os.FileInfo, err error) error {
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-
-	for _, file := range files {
-		fileParts := strings.Split(file, ".")
-		if len(files) != 3 {
-			continue
-		}
-		repoName := fileParts[0]
-		commit := fileParts[1]
-
-		if repo.Name != repoName {
-			continue
-		}
-		lastCommit = commit
-		break
-	}
-	return lastCommit, nil
-}
 
 func GetHomeDir() string {
 	usr, err := user.Current()
@@ -78,6 +27,12 @@ func FileExists(name string) (bool, error) {
 		return false, nil
 	}
 	return err == nil, err
+}
+
+func ChDirGee() error {
+	dir := fmt.Sprintf("%s/%s/", GetHomeDir(), ".gee")
+	err := os.Chdir(dir)
+	return err
 }
 
 func WriteRepoToConfig(config *Config, cd string, err error) error {
@@ -127,6 +82,32 @@ func WriteRepoToConfig(config *Config, cd string, err error) error {
 	return err
 }
 
+func WriteRepoLastCommitToJSON(repo string, lastCommit string) error {
+	repos, err := readGeeJson()
+	found := false
+	if err != nil {
+		return err
+	}
+
+	for _, r := range repos.GeeRepos {
+		if r.Repo == repo {
+			r.LastCommit = lastCommit
+			found = true
+			break
+		}
+		continue
+	}
+
+	if !found {
+		repos.GeeRepos = append(repos.GeeRepos, GeeJSON{
+			Repo:       repo,
+			LastCommit: lastCommit,
+		})
+	}
+	err = writeGeeJson(*repos)
+	return err
+}
+
 func repoExists(repos []Repo, name string) error {
 	var err error
 	for _, repo := range repos {
@@ -141,4 +122,40 @@ func repoExists(repos []Repo, name string) error {
 
 func getGeePath() string {
 	return fmt.Sprintf("%s/%s", GetHomeDir(), "gee.toml")
+}
+
+func writeGeeJson(config GeeJsonConfig) error {
+	byteValue, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile("gee.json", byteValue, 0644)
+	return err
+}
+
+
+func readGeeJson() (*GeeJsonConfig, error) {
+	var config GeeJsonConfig
+	err := ChDirGee()
+	if err != nil {
+		return nil, err
+	}
+
+	jsonFile, err := os.Open("gee.json")
+	if err != nil {
+		return nil, err
+	}
+	defer jsonFile.Close()
+
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(byteValue, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
 }

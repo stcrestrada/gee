@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/stcrestrada/gogo"
 	"github.com/urfave/cli/v2"
 )
@@ -84,6 +86,31 @@ func statusCommand(config *Config) *cli.Command {
 					continue
 				}
 				Warning(res.Error.Error())
+			}
+			return nil
+		},
+	}
+}
+// for testing purposes, will not import this command though
+func jsonCommand(config *Config) *cli.Command {
+	return &cli.Command{
+		Name:  "json",
+		Usage: "json this shit",
+		Action: func(c *cli.Context) error {
+			repos := config.Repos
+
+			fmt.Printf("%d \n", len(repos))
+			for _, r := range repos {
+				//commit := fmt.Sprintf("%d +123456", idx)
+				//err := WriteRepoLastCommitToJSON(r.Name, commit)
+				//if err != nil {
+				//	CheckIfError(err)
+				//}
+				_, err := DeleteTmpBranch(r)
+				fmt.Printf("\n")
+				fmt.Printf("EEROR: %s \n", err)
+				fmt.Printf("\n")
+
 			}
 			return nil
 		},

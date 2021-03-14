@@ -20,8 +20,8 @@ func main() {
 	if err != nil {
 		// skip displaying these loggers when the user calls init
 		if !containsArg(os.Args, "init") {
-			Warning("%s", err)
-			Info("Run gee init")
+			Warning("%s \n", err)
+			Info("Run gee init \n")
 		}
 
 		initCmd := initCommand()
@@ -53,6 +53,7 @@ func main() {
 		addCommand(),
 		pullCommand(config),
 		statusCommand(config),
+		jsonCommand(config),
 	}
 
 	// Run the CLI app
@@ -68,6 +69,6 @@ func init() {
 	// Initialise a CLI app
 	app = cli.NewApp()
 	app.Name = "gee"
-	app.Usage = "Gee gives control of git across repos without changing directories"
+	app.Usage = "Gee gives user's control of git commands across repos without moving between them."
 	app.Version = "0.0.0"
 }

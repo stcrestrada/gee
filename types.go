@@ -22,3 +22,12 @@ type Repo struct {
 type Config struct {
 	Repos []Repo `toml:"repos" validate:"required,dive,required"`
 }
+
+type GeeJSON struct {
+	Repo string `json:"repo,omitempty"`
+	LastCommit string `json:"last_commit,omitempty"`
+}
+
+type GeeJsonConfig struct {
+	GeeRepos []GeeJSON `json:"repos"`
+}
