@@ -37,7 +37,7 @@ brews:
   -
     # Name template of the recipe
     # Default to project name
-    name: myproject
+    name: gee
 
 
     # GitHub/GitLab repository to push the formula to
