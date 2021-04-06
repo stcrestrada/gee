@@ -3,7 +3,7 @@
 ### install
 
 ```
-brew tap sestrada/gee https://github.com/stcrestrada/gee
+brew tap stcrestrada/gee https://github.com/stcrestrada/gee
 
 brew install gee
 ```
