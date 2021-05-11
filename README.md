@@ -32,6 +32,7 @@ gee status
 ```
 
 ## Git pull
+##### Pretty cool command. gee pull will pull all git changes as long as you're in the main branch. If you have uncommitted changes inthe main branch, gee stashes those changes, pulls down and reappies the uncommitted changes. 
 ```
 gee pull
 ```
