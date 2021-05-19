@@ -24,7 +24,7 @@ func (c *GitCommand) CurrentBranch() ([]byte, error) {
 }
 
 func (c *GitCommand) MainBranch() ([]byte, error) {
-	cmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "origin/HEAD")
 	cmd.Dir = c.Dir
 	output, err := cmd.Output()
 
@@ -69,7 +69,10 @@ func (c *GitCommand) isMainBranch() (bool, error) {
 		return false, nil
 	}
 
-	isSame := bytes.Equal(bytes.TrimSpace(mainBranch), bytes.TrimSpace(currBranch))
+	parseMainBranch := strings.Split(string(mainBranch), "/")
+	branch := []byte(parseMainBranch[len(parseMainBranch) -1])
+
+	isSame := bytes.Equal(bytes.TrimSpace(branch), bytes.TrimSpace(currBranch))
 	return isSame, nil
 
 }
