@@ -37,12 +37,13 @@ func GeePullAll(repo Repo) (*CommandOutput, error) {
 	}
 
 	if !isSameBranch {
-		output := fmt.Sprintf("skipping, cannot update repo, %s. Currently not in main branch", repo.Name)
+		output := fmt.Sprintf("Skipping, cannot pull updates for repository -> %s. Currently not in main branch", repo.Name)
 
 		return &CommandOutput{
 			Repo:   repo.Name,
 			Dir:    repo.Path,
 			Output: []byte(output),
+			Warning: true,
 		}, nil
 	}
 
@@ -59,7 +60,7 @@ func GeePullAll(repo Repo) (*CommandOutput, error) {
 	if !isClean {
 		cmdResult, errr := ReapplyStashAndPull(repo, strings.TrimSpace(string(mainBranch)))
 		if errr != nil {
-			output := fmt.Sprintf("%s has unstashed changes unable to pull: %s \n", repo.Name, errr)
+			output := fmt.Sprintf("Error pulling %s -> %s \n", repo.Name, errr)
 			return &CommandOutput{
 				Repo:    repo.Name,
 				Dir:     repo.Path,

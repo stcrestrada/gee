@@ -159,3 +159,9 @@ func readGeeJson() (*GeeJsonConfig, error) {
 	}
 	return &config, nil
 }
+func RemoveOriginFromBranchName(branch string) string {
+	// branch --> origin/master
+	parseBranchName := strings.Split(branch, "/")
+	grabLastItem := parseBranchName[len(parseBranchName) -1]
+	return grabLastItem
+}

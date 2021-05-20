@@ -2,31 +2,58 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 )
 
 func (c *GitCommand) PullAll(branch string) ([]byte, error) {
-	cmd := exec.Command("git", "-c", "color.status=always", "pull", "origin", fmt.Sprintf("%s", branch))
-	cmd.Dir = c.Dir
-	output, err := cmd.Output()
+	// in the event that the branch is prefixed with origin, we will parse to remove 'origin'
+	var cmd *exec.Cmd
+	if strings.HasPrefix(branch, "origin") {
+		branchName := RemoveOriginFromBranchName(branch)
+		cmd = exec.Command("git", "pull", "origin", fmt.Sprintf("%s", branchName))
+	} else {
+		cmd = exec.Command("git","pull", "origin", fmt.Sprintf("%s", branch))
+	}
 
-	return output, err
+	cmd.Dir = c.Dir
+	output, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return output, errors.New(c.Stderr)
+	}
+
+	return output, nil
 }
 
 func (c *GitCommand) CurrentBranch() ([]byte, error) {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	cmd.Dir = c.Dir
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 
-	return output, err
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return output, errors.New(c.Stderr)
+	}
+
+	return output, nil
 }
 
 func (c *GitCommand) MainBranch() ([]byte, error) {
-	cmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "origin/HEAD")
 	cmd.Dir = c.Dir
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return output, errors.New(c.Stderr)
+	}
 
 	return output, err
 }
@@ -34,7 +61,13 @@ func (c *GitCommand) MainBranch() ([]byte, error) {
 func (c *GitCommand) Status() ([]byte, error) {
 	cmd := exec.Command("git", "-c", "color.status=always", "status")
 	cmd.Dir = c.Dir
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return output, errors.New(c.Stderr)
+	}
 
 	return output, err
 }
@@ -43,7 +76,13 @@ func (c *GitCommand) IsRepoClean() (bool, error) {
 	cmd := exec.Command("git", "status", "--porcelain")
 	cmd.Dir = c.Dir
 
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	isClean := bytes.Equal(bytes.TrimSpace(output), []byte(""))
 	return isClean, err
@@ -53,7 +92,13 @@ func (c *GitCommand) isClean() (bool, error) {
 	cmd := exec.Command("git", "diff-index", "--quiet", "HEAD")
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }
@@ -61,23 +106,31 @@ func (c *GitCommand) isClean() (bool, error) {
 func (c *GitCommand) isMainBranch() (bool, error) {
 	mainBranch, err := c.MainBranch()
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
 	currBranch, err := c.CurrentBranch()
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
-	isSame := bytes.Equal(bytes.TrimSpace(mainBranch), bytes.TrimSpace(currBranch))
-	return isSame, nil
+	mBranch := []byte(RemoveOriginFromBranchName(string(mainBranch))) // returns string by convert back to byte array for check
+
+	isSame := bytes.Equal(bytes.TrimSpace(mBranch), bytes.TrimSpace(currBranch))
+	return isSame, err
 
 }
 func (c *GitCommand) Add() (bool, error) {
 	cmd := exec.Command("git", "add", ".")
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }
@@ -86,7 +139,13 @@ func (c *GitCommand) Stash() (bool, error) {
 	cmd := exec.Command("git", "stash")
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }
@@ -95,7 +154,13 @@ func (c *GitCommand) CheckoutToTmpBranch() (bool, error) {
 	cmd := exec.Command("git", "checkout", "-b", "tmpmain")
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }
@@ -104,7 +169,13 @@ func (c *GitCommand) DeleteTmpBranch() (bool, error) {
 	cmd := exec.Command("git", "branch", "-D", "tmpmain")
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }
@@ -113,7 +184,13 @@ func (c *GitCommand) StashApply() (bool, error) {
 	cmd := exec.Command("git", "stash", "apply")
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }
@@ -126,10 +203,10 @@ func (c *GitCommand) AddAndStash() (bool, error) {
 
 	_, err = c.Stash()
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
-	return true, nil
+	return true, err
 }
 
 
@@ -137,7 +214,13 @@ func (c *GitCommand) LastCommitHash() (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = c.Dir  // montezuma beach
 
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return "", errors.New(c.Stderr)
+	}
 
 	return strings.TrimSpace(string(output)), err
 }
@@ -146,7 +229,13 @@ func (c *GitCommand) AbortMergeConflict() (bool, error) {
 	cmd := exec.Command("git", "reset", "--merge")
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }
@@ -155,7 +244,13 @@ func (c *GitCommand) Checkout(branch string) (bool, error) {
 	cmd := exec.Command("git", "checkout", fmt.Sprintf("%s", branch))
 	cmd.Dir = c.Dir
 
-	_, err := cmd.Output()
+	_, err := cmd.CombinedOutput()
+
+	c.Stderr = cmd.Stderr.(*bytes.Buffer).String()
+
+	if len(c.Stderr) > 0 && err != nil {
+		return false, errors.New(c.Stderr)
+	}
 
 	return err == nil, err
 }

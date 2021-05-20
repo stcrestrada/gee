@@ -53,7 +53,6 @@ func main() {
 		addCommand(),
 		pullCommand(config),
 		statusCommand(config),
-		jsonCommand(config),
 	}
 
 	// Run the CLI app
