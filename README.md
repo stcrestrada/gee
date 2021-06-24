@@ -8,6 +8,13 @@ brew tap stcrestrada/gee https://github.com/stcrestrada/gee
 brew install gee
 ```
 
+### Upgrade 
+
+```
+brew upgrade gee
+```
+
+
 ## initialize 
 #### Creates a gee.toml file with all the git directories
 ```
