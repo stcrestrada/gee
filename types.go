@@ -10,6 +10,7 @@ type CommandOutput struct {
 type GitCommand struct {
 	Repo string
 	Dir  string
+	Stderr string
 }
 
 type Repo struct {

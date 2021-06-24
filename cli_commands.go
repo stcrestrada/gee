@@ -52,7 +52,7 @@ func pullCommand(config *Config) *cli.Command {
 					} else {
 						Info("Pulling Repo %s \n", cmdOutput.Repo)
 						println(string(cmdOutput.Output))
-						Info("Finished pulling %s \n", cmdOutput.Repo)
+						Info("Finished Pulling %s \n", cmdOutput.Repo)
 					}
 					continue
 				}
