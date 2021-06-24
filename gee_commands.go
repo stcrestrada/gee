@@ -235,6 +235,12 @@ func ReapplyStashAndPull(repo Repo, branch string) (*CommandOutput, error) {
 	}, err
 }
 
-func Rollback() {
+func CleanupStaleBranches(repo Repo) (*Repo, error) {
+	cmd := GitCommand{
+		Repo: repo.Name,
+		Dir:  repo.Path,
+	}
+	_, err := cmd.DeleteTmpBranch()
 
+	return &repo, err
 }

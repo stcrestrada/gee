@@ -53,6 +53,7 @@ func main() {
 		addCommand(),
 		pullCommand(config),
 		statusCommand(config),
+		removeStaleBranches(config),
 	}
 
 	// Run the CLI app

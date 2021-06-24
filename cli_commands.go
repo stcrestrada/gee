@@ -91,6 +91,36 @@ func statusCommand(config *Config) *cli.Command {
 		},
 	}
 }
+
+func removeStaleBranches(config *Config) *cli.Command {
+	return &cli.Command{
+		Name:  "remove-stale-branches",
+		Usage: "remove stale branch 'tmpmain'. Deprecating soon.",
+		Action: func(c *cli.Context) error {
+			concurrency := len(config.Repos)
+			repos := config.Repos
+			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
+				repo := repos[i]
+				return func() (interface{}, error) {
+					output, err := CleanupStaleBranches(repo)
+					return output, err
+				}
+			})
+			feed := pool.Go()
+			for res := range feed {
+				cmdOutput := res.Result.(*Repo)
+				if res.Error == nil {
+					Info("Deleted branch tmpmain from repository %s\n",  cmdOutput.Name)
+					continue
+				}
+				Warning("Ran for repository %s \n", cmdOutput.Name)
+				WarningRed(res.Error.Error())
+			}
+			return nil
+		},
+	}
+}
+
 // for testing purposes, will not import this command though
 func jsonCommand(config *Config) *cli.Command {
 	return &cli.Command{

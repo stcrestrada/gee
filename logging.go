@@ -27,3 +27,9 @@ func Warning(format string, args ...interface{}) {
 	c := color.New(color.FgYellow, color.Bold)
 	c.Printf("%s\n", fmt.Sprintf(format, args...))
 }
+
+func WarningRed(format string, args ...interface{}) {
+	c := color.New(color.FgRed, color.Bold)
+	c.Printf("%s\n", fmt.Sprintf(format, args...))
+}
+
