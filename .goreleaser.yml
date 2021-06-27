@@ -36,12 +36,6 @@ brews:
     # Default to project name
     name: gee
 
-    # IDs of the archives to use.
-    # Defaults to all.
-    ids:
-      - foo
-      - bar
-
     # GOARM to specify which 32-bit arm version to use if there are multiple versions
     # from the build section. Brew formulas support atm only one 32-bit version.
     # Default is 6 for all artifacts or each id if there a multiple versions.
@@ -55,7 +49,6 @@ brews:
     tap:
       owner: stcrestrada
       name: homebrew-tap
-      # Optionally a token can be provided, if it differs from the token provided to GoReleaser
 
     # Template for the url which is determined by the given Token (github or gitlab)
     # Default for github is "https://github.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
