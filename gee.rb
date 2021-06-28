@@ -5,29 +5,29 @@
 class Gee < Formula
   desc "Manage all your git repos simultaneously."
   homepage "https://github.com/stcrestrada/gee"
-  version "0.1.15"
+  version "0.1.16"
   license "MIT"
   bottle :unneeded
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.15/gee_0.1.15_Darwin_x86_64.tar.gz"
-      sha256 "061a6b0318b7b9f64b8bed920a1ab700203e9efb3e9ad0662fa6bec29f22e63e"
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Darwin_x86_64.tar.gz"
+      sha256 "89552707447976bdd482b0c1d02095abd93024fc03d1136f7e9976b6e95a6174"
     end
     if Hardware::CPU.arm?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.15/gee_0.1.15_Darwin_arm64.tar.gz"
-      sha256 "5e669ccb7144557012faf0519e8521455d7a9a16dd38fd1f424982bf27fded42"
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Darwin_arm64.tar.gz"
+      sha256 "fe2e8340ad3da9a86e878204880d32c07c1b68bf44d875a4097a134c6721ccad"
     end
   end
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.15/gee_0.1.15_Linux_x86_64.tar.gz"
-      sha256 "de4fe36d62ee30770a5b01d75d8ba82b8b695f29a70bac7c84417bc2e3ae0b7c"
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Linux_x86_64.tar.gz"
+      sha256 "b0706e7731149e8db37e8460cae71354ce1bb1e22bb74d5cb5505066b5f15dbb"
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.15/gee_0.1.15_Linux_arm64.tar.gz"
-      sha256 "4b395ef31f9035690f8715153d3bef06e5476067e5524ce23d6091cfce25f270"
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Linux_arm64.tar.gz"
+      sha256 "cc0796b9f0dd207fae78f67ac260f6137316d467f92a98a1ed0ee39dc1cdbdfe"
     end
   end
 
