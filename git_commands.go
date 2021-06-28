@@ -241,7 +241,13 @@ func (c *GitCommand) AbortMergeConflict() (bool, error) {
 }
 
 func (c *GitCommand) Checkout(branch string) (bool, error) {
-	cmd := exec.Command("git", "checkout", fmt.Sprintf("%s", branch))
+	var cmd *exec.Cmd
+	if strings.HasPrefix(branch, "origin") {
+		parseBranch := strings.Split(branch, "/")
+		cmd = exec.Command("git", "checkout", fmt.Sprintf("%s", parseBranch[len(parseBranch) -1]))
+	} else {
+		cmd = exec.Command("git", "checkout", fmt.Sprintf("%s", branch))
+	}
 	cmd.Dir = c.Dir
 
 	_, err := cmd.CombinedOutput()
