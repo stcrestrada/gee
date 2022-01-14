@@ -5,33 +5,44 @@
 class Gee < Formula
   desc "Manage all your git repos simultaneously."
   homepage "https://github.com/stcrestrada/gee"
-  version "0.1.16"
+  version "0.1.17"
   license "MIT"
-  bottle :unneeded
 
   on_macos do
-    if Hardware::CPU.intel?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Darwin_x86_64.tar.gz"
-      sha256 "89552707447976bdd482b0c1d02095abd93024fc03d1136f7e9976b6e95a6174"
-    end
     if Hardware::CPU.arm?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Darwin_arm64.tar.gz"
-      sha256 "fe2e8340ad3da9a86e878204880d32c07c1b68bf44d875a4097a134c6721ccad"
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.17/gee_0.1.17_Darwin_arm64.tar.gz"
+      sha256 "2b2694ca2385e5caaa0358e38e8415005f67cbbae43af449a335d9a8764b4a61"
+
+      def install
+        bin.install "gee"
+      end
+    end
+    if Hardware::CPU.intel?
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.17/gee_0.1.17_Darwin_x86_64.tar.gz"
+      sha256 "13536e3def07714f05ab3c4824478efe5615a44f2e0cfd3a9f24ec0a1583204b"
+
+      def install
+        bin.install "gee"
+      end
     end
   end
 
   on_linux do
-    if Hardware::CPU.intel?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Linux_x86_64.tar.gz"
-      sha256 "b0706e7731149e8db37e8460cae71354ce1bb1e22bb74d5cb5505066b5f15dbb"
-    end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/stcrestrada/gee/releases/download/v0.1.16/gee_0.1.16_Linux_arm64.tar.gz"
-      sha256 "cc0796b9f0dd207fae78f67ac260f6137316d467f92a98a1ed0ee39dc1cdbdfe"
-    end
-  end
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.17/gee_0.1.17_Linux_arm64.tar.gz"
+      sha256 "a1c28b2d1237f9eac5c1b8ebe9ee8feedf7561e301074e5350508aa68ceda7ca"
 
-  def install
-    bin.install "gee"
+      def install
+        bin.install "gee"
+      end
+    end
+    if Hardware::CPU.intel?
+      url "https://github.com/stcrestrada/gee/releases/download/v0.1.17/gee_0.1.17_Linux_x86_64.tar.gz"
+      sha256 "e5fc71da16179df87d48008d128259ac33c21db3b54d0008a2ea1de8172fafa0"
+
+      def install
+        bin.install "gee"
+      end
+    end
   end
 end
