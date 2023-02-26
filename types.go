@@ -8,16 +8,19 @@ type CommandOutput struct {
 }
 
 type GitCommand struct {
-	Repo string
-	Dir  string
+	Repo   string
+	Dir    string
 	Stderr string
 }
 
 type Repo struct {
 	// name of repo
-	Name string `toml:"name" validate:"required,min=1"`
+	Name string `toml:"name"`
 	// path of repo
-	Path string `toml:"path" validate:"required,min=1"`
+	Path string `toml:"path"`
+
+	// remote origin of repo
+	Remote string `toml:"remote"`
 }
 
 type Config struct {
@@ -25,10 +28,20 @@ type Config struct {
 }
 
 type GeeJSON struct {
-	Repo string `json:"repo,omitempty"`
+	Repo       string `json:"repo,omitempty"`
 	LastCommit string `json:"last_commit,omitempty"`
 }
 
 type GeeJsonConfig struct {
 	GeeRepos []GeeJSON `json:"repos"`
+}
+
+type GeeConfigInfo struct {
+	ConfigFile     string
+	ConfigFilePath string
+}
+
+type GeeContext struct {
+	GeeConfigInfo
+	Config
 }

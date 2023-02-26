@@ -1,18 +1,33 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/stcrestrada/gogo"
 	"github.com/urfave/cli/v2"
+	"os"
 )
 
-func initCommand() *cli.Command {
+func createCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "init",
-		Usage: "initialize gee directory and toml file",
+		Name:  "create",
+		Usage: "create gee.toml",
 		Action: func(context *cli.Context) error {
-			err := GeeInit()
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			err = GeeCreate(cwd)
+			if err == nil {
+				Info("Created gee.toml in %s \n", cwd)
+			} else {
+				return err
+			}
+
+			// insert dummy data into gee.toml
+			geeCtx := NewDummyGeeContext(cwd)
+			err = InsertConfigIntoGeeToml(geeCtx)
+			if err != nil {
+				return err
+			}
 			return err
 		},
 	}
@@ -23,24 +38,46 @@ func addCommand() *cli.Command {
 		Name:  "add",
 		Usage: "add repo to gee.toml",
 		Action: func(context *cli.Context) error {
-			err := GeeAdd()
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			ctx, err := LoadConfig(cwd)
+			if err != nil {
+				Warning("Warning: %s \n", err)
+				return nil
+			}
+
+			err = GeeAdd(ctx, cwd)
 			return err
 		},
 	}
 }
 
-func pullCommand(config *Config) *cli.Command {
+func pullCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "pull",
 		Usage: "Git pull and update all repos",
 		Action: func(c *cli.Context) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			ctx, err := LoadConfig(cwd)
+			if err != nil {
+				Warning("Warning: %s \n", err)
+				return nil
+			}
+
+			config := ctx.Config
 			concurrency := len(config.Repos)
 			repos := config.Repos
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
 				repo := repos[i]
 				return func() (interface{}, error) {
-					output, err := GeePullAll(repo)
-					return output, err
+					output, errr := GeePullAll(repo)
+					return output, errr
 				}
 			})
 			outputFeed := pool.Go()
@@ -63,11 +100,23 @@ func pullCommand(config *Config) *cli.Command {
 	}
 }
 
-func statusCommand(config *Config) *cli.Command {
+func statusCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "status",
 		Usage: "Git status of all repos",
 		Action: func(c *cli.Context) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			ctx, err := LoadConfig(cwd)
+			if err != nil {
+				Warning("Warning: %s \n", err)
+				return nil
+			}
+
+			config := ctx.Config
 			concurrency := len(config.Repos)
 			repos := config.Repos
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
@@ -86,61 +135,6 @@ func statusCommand(config *Config) *cli.Command {
 					continue
 				}
 				Warning(res.Error.Error())
-			}
-			return nil
-		},
-	}
-}
-
-func removeStaleBranches(config *Config) *cli.Command {
-	return &cli.Command{
-		Name:  "remove-stale-branches",
-		Usage: "remove stale branch 'tmpmain'. Deprecating soon.",
-		Action: func(c *cli.Context) error {
-			concurrency := len(config.Repos)
-			repos := config.Repos
-			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
-				repo := repos[i]
-				return func() (interface{}, error) {
-					output, err := CleanupStaleBranches(repo)
-					return output, err
-				}
-			})
-			feed := pool.Go()
-			for res := range feed {
-				cmdOutput := res.Result.(*Repo)
-				if res.Error == nil {
-					Info("Deleted branch tmpmain from repository %s\n",  cmdOutput.Name)
-					continue
-				}
-				Warning("Ran for repository %s \n", cmdOutput.Name)
-				WarningRed(res.Error.Error())
-			}
-			return nil
-		},
-	}
-}
-
-// for testing purposes, will not import this command though
-func jsonCommand(config *Config) *cli.Command {
-	return &cli.Command{
-		Name:  "json",
-		Usage: "json this shit",
-		Action: func(c *cli.Context) error {
-			repos := config.Repos
-
-			fmt.Printf("%d \n", len(repos))
-			for _, r := range repos {
-				//commit := fmt.Sprintf("%d +123456", idx)
-				//err := WriteRepoLastCommitToJSON(r.Name, commit)
-				//if err != nil {
-				//	CheckIfError(err)
-				//}
-				_, err := DeleteTmpBranch(r)
-				fmt.Printf("\n")
-				fmt.Printf("EEROR: %s \n", err)
-				fmt.Printf("\n")
-
 			}
 			return nil
 		},

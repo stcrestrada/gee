@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/fatih/color"
 )
 
@@ -19,7 +17,6 @@ func CheckIfError(err error) {
 	}
 	c := color.New(color.FgHiRed, color.Bold)
 	c.Printf("%s\n", fmt.Sprintf("error: %s", err))
-	os.Exit(1)
 }
 
 // Warning should be used to display a warning
@@ -32,4 +29,3 @@ func WarningRed(format string, args ...interface{}) {
 	c := color.New(color.FgRed, color.Bold)
 	c.Printf("%s\n", fmt.Sprintf(format, args...))
 }
-

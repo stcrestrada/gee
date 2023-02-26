@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/go-playground/validator/v10"
@@ -13,51 +12,16 @@ var (
 )
 var validate *validator.Validate
 
-
-
 func main() {
-	configTree, err := loadToml()
-	if err != nil {
-		// skip displaying these loggers when the user calls init
-		if !containsArg(os.Args, "init") {
-			Warning("%s \n", err)
-			Info("Run gee init \n")
-		}
-
-		initCmd := initCommand()
-		app.Commands = append(app.Commands, initCmd)
-		err = app.Run(os.Args)
-		if err != nil {
-			CheckIfError(err)
-			return
-		}
-		return
-	}
-	config, err := setConfig(*configTree)
-	if err != nil {
-		// skip displaying these loggers when the user calls add
-		if !containsArg(os.Args, "add") {
-			Warning(fmt.Sprintf("%s \n", err))
-		}
-		addCmd := addCommand()
-		app.Commands = append(app.Commands, addCmd)
-		err = app.Run(os.Args)
-		if err != nil {
-			CheckIfError(err)
-			return
-		}
-		return
-	}
 	app.Commands = []*cli.Command{
-		initCommand(),
+		createCommand(),
 		addCommand(),
-		pullCommand(config),
-		statusCommand(config),
-		removeStaleBranches(config),
+		pullCommand(),
+		statusCommand(),
 	}
 
 	// Run the CLI app
-	err = app.Run(os.Args)
+	err := app.Run(os.Args)
 	if err != nil {
 		CheckIfError(err)
 		return
@@ -70,5 +34,5 @@ func init() {
 	app = cli.NewApp()
 	app.Name = "gee"
 	app.Usage = "Gee gives user's control of git commands across repos without moving between them."
-	app.Version = "0.0.0"
+	app.Version = "1.0.0"
 }
