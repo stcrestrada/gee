@@ -1,22 +1,5 @@
 package main
 
-import "io"
-
-type CommandOutput struct {
-	Repo      string
-	RemoteUrl string
-	Dir       string
-	Output    []byte
-	Read      *io.ReadCloser
-	Warning   bool
-}
-
-type GitCommand struct {
-	Repo   string
-	Dir    string
-	Stderr string
-}
-
 type Repo struct {
 	// name of repo
 	Name string `toml:"name"`
@@ -32,15 +15,6 @@ type Repo struct {
 
 type Config struct {
 	Repos []Repo `toml:"repos" validate:"required,dive,required"`
-}
-
-type GeeJSON struct {
-	Repo       string `json:"repo,omitempty"`
-	LastCommit string `json:"last_commit,omitempty"`
-}
-
-type GeeJsonConfig struct {
-	GeeRepos []GeeJSON `json:"repos"`
 }
 
 type GeeConfigInfo struct {
