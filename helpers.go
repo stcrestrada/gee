@@ -1,26 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
-	"os/user"
 	"path"
 	"strings"
 
 	"github.com/pelletier/go-toml"
 )
-
-func GetHomeDir() string {
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return usr.HomeDir
-}
 
 func FileExists(name string) (bool, error) {
 	_, err := os.Stat(name)
@@ -28,12 +16,6 @@ func FileExists(name string) (bool, error) {
 		return false, err
 	}
 	return err == nil, err
-}
-
-func ChDirGee() error {
-	dir := fmt.Sprintf("%s/%s/", GetHomeDir(), ".gee")
-	err := os.Chdir(dir)
-	return err
 }
 
 func WriteRepoToConfig(ctx *GeeContext, cwd string) error {
@@ -72,32 +54,6 @@ func WriteRepoToConfig(ctx *GeeContext, cwd string) error {
 	return err
 }
 
-func WriteRepoLastCommitToJSON(repo string, lastCommit string) error {
-	repos, err := readGeeJson()
-	found := false
-	if err != nil {
-		return err
-	}
-
-	for _, r := range repos.GeeRepos {
-		if r.Repo == repo {
-			r.LastCommit = lastCommit
-			found = true
-			break
-		}
-		continue
-	}
-
-	if !found {
-		repos.GeeRepos = append(repos.GeeRepos, GeeJSON{
-			Repo:       repo,
-			LastCommit: lastCommit,
-		})
-	}
-	err = writeGeeJson(*repos)
-	return err
-}
-
 func repoExists(repos []Repo, name string) error {
 	var err error
 	for _, repo := range repos {
@@ -111,44 +67,6 @@ func repoExists(repos []Repo, name string) error {
 	return err
 }
 
-func getGeePath() string {
-	return fmt.Sprintf("%s/%s", GetHomeDir(), "gee.toml")
-}
-
-func writeGeeJson(config GeeJsonConfig) error {
-	byteValue, err := json.MarshalIndent(config, "", " ")
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile("gee.json", byteValue, 0644)
-	return err
-}
-
-func readGeeJson() (*GeeJsonConfig, error) {
-	var config GeeJsonConfig
-	err := ChDirGee()
-	if err != nil {
-		return nil, err
-	}
-
-	jsonFile, err := os.Open("gee.json")
-	if err != nil {
-		return nil, err
-	}
-	defer jsonFile.Close()
-
-	byteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(byteValue, &config)
-	if err != nil {
-		return nil, err
-	}
-	return &config, nil
-}
 func RemoveOriginFromBranchName(branch string) string {
 	// branch --> origin/master
 	parseBranchName := strings.Split(branch, "/")
