@@ -84,10 +84,16 @@ func GeePullAll(repo Repo) (*CommandOutput, error) {
 
 func GeeCreate(cwd string) error {
 	geeFile := path.Join(cwd, "gee.toml")
-	_, err := os.Create(geeFile)
+	_, err := os.Stat(geeFile)
 	if err != nil {
 		return err
 	}
+
+	_, err = os.Create(geeFile)
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -195,4 +201,18 @@ func CleanupStaleBranches(repo Repo) (*Repo, error) {
 	_, err := cmd.DeleteTmpBranch()
 
 	return &repo, err
+}
+
+func GeeClone(repo Repo) (*CommandOutput, error) {
+	cmd := GitCommand{
+		Repo: repo.Name,
+		Dir:  repo.Path,
+	}
+	_, err := cmd.Clone(repo.Remote, repo.Path)
+
+	return &CommandOutput{
+		Repo: repo.Name,
+		Dir:  repo.Path,
+		//Read: &output,
+	}, err
 }

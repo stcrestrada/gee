@@ -18,6 +18,7 @@ func main() {
 		addCommand(),
 		pullCommand(),
 		statusCommand(),
+		cloneCommand(),
 	}
 
 	// Run the CLI app

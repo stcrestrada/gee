@@ -1,10 +1,14 @@
 package main
 
+import "io"
+
 type CommandOutput struct {
-	Repo    string
-	Dir     string
-	Output  []byte
-	Warning bool
+	Repo      string
+	RemoteUrl string
+	Dir       string
+	Output    []byte
+	Read      *io.ReadCloser
+	Warning   bool
 }
 
 type GitCommand struct {
