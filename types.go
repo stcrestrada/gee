@@ -25,6 +25,9 @@ type Repo struct {
 
 	// remote origin of repo
 	Remote string `toml:"remote"`
+
+	// branch of repo
+	Branch string `toml:"branch"`
 }
 
 type Config struct {

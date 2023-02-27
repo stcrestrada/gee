@@ -163,7 +163,8 @@ func NewDummyGeeContext(cwd string) *GeeContext {
 			Repo{
 				Name:   "gee",
 				Path:   cwd,
-				Remote: "",
+				Remote: "git@github.com:stcrestrada/gee.git",
+				Branch: "main",
 			},
 		},
 	}

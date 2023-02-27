@@ -34,10 +34,23 @@ func Clone(remoteUrl string, repoPath string, repoName string, rc *RunConfig, on
 	})
 
 }
+func Status(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+	cmd := exec.Command("git", "-c", "color.status=always", "status")
+	cmd.Stderr = rc.StdErr
+	cmd.Stdout = rc.StdOut
+	err := cmd.Run()
 
-func Pull(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+	onFinish(&CommandOnFinish{
+		Repo:      repoName,
+		RunConfig: rc,
+		Failed:    err != nil,
+		Error:     err,
+	})
+
+}
+
+func Pull(repoName string, branch string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
 	var cmd *exec.Cmd
-	branch := "main"
 	if strings.HasPrefix(branch, "origin") {
 		branchName := RemoveOriginFromBranchName(branch)
 		cmd = exec.Command("git", "pull", "origin", fmt.Sprintf("%s", branchName))
@@ -56,7 +69,7 @@ func Pull(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinis
 	})
 
 }
-func GetMainBranch(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+func BranchName(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	cmd.Stderr = rc.StdErr
 	cmd.Stdout = rc.StdOut

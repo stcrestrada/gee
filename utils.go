@@ -9,7 +9,7 @@ import (
 
 func setConfig(config toml.Tree) (*Config, error) {
 	conf := Config{}
-	err := config.Unmarshal(&conf);
+	err := config.Unmarshal(&conf)
 	if err != nil {
 		return nil, err
 	}

@@ -89,14 +89,30 @@ func pullCommand() *cli.Command {
 			finishPrint := PrintSpinnerStates(os.Stdout, states)
 
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
+				var branch string
 				repo := repos[i]
 				state := states[i]
 				return func() (interface{}, error) {
+					branchRc := &RunConfig{
+						StdErr: &bytes.Buffer{},
+						StdOut: &bytes.Buffer{},
+					}
 					rc := &RunConfig{
 						StdErr: &bytes.Buffer{},
 						StdOut: &bytes.Buffer{},
 					}
-					Pull(repo.Name, rc, func(onFinish *CommandOnFinish) {
+					if repo.Branch != "" {
+						branch = repo.Branch
+					} else {
+						BranchName(repo.Name, branchRc, func(onFinish *CommandOnFinish) {
+							if onFinish.Failed {
+								branch = "master"
+							} else {
+								branch = branchRc.StdOut.String()
+							}
+						})
+					}
+					Pull(repo.Name, branch, rc, func(onFinish *CommandOnFinish) {
 						if onFinish.Failed {
 							state.State = StateError
 							state.Msg = fmt.Sprintf("Failed to pull %s", repo.Name)
@@ -151,22 +167,35 @@ func statusCommand() *cli.Command {
 			config := ctx.Config
 			concurrency := len(config.Repos)
 			repos := config.Repos
+			commandOnFinish := make([]*CommandOnFinish, len(repos))
+
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
 				repo := repos[i]
 				return func() (interface{}, error) {
-					output, err := GeeStatusAll(repo)
-					return output, err
+					rc := &RunConfig{
+						StdErr: &bytes.Buffer{},
+						StdOut: &bytes.Buffer{},
+					}
+
+					Status(repo.Name, rc, func(onFinish *CommandOnFinish) {
+						commandOnFinish[i] = onFinish
+					})
+					return nil, nil
 				}
 			})
 			feed := pool.Go()
 			for res := range feed {
 				if res.Error == nil {
-					cmdOutput := res.Result.(*CommandOutput)
-					Info("Status of %s \n", cmdOutput.Repo)
-					println(string(cmdOutput.Output))
 					continue
 				}
 				Warning(res.Error.Error())
+			}
+			for _, onFinish := range commandOnFinish {
+				if !onFinish.Failed {
+					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
+					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
+					fmt.Printf("🟢 Status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+				}
 			}
 			return nil
 		},
