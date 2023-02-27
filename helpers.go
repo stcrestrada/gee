@@ -111,3 +111,12 @@ func InsertConfigIntoGeeToml(ctx *GeeContext) error {
 
 	return nil
 }
+
+func FullPathWithRepo(repoPath string, repoName string) string {
+	// get last directory in path
+	lastDirName := repoPath[strings.LastIndex(repoPath, "/")+1:]
+	if lastDirName == repoName {
+		return repoPath
+	}
+	return path.Join(repoPath, repoName)
+}

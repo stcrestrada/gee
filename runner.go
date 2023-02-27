@@ -20,7 +20,7 @@ type CommandOnFinish struct {
 	Error     error
 }
 
-func Clone(remoteUrl string, repoPath string, repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+func Clone(repoName string, remoteUrl string, repoPath string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
 	cmd := exec.Command("git", "-C", repoPath, "clone", remoteUrl)
 	cmd.Stderr = rc.StdErr
 	cmd.Stdout = rc.StdOut
@@ -34,8 +34,9 @@ func Clone(remoteUrl string, repoPath string, repoName string, rc *RunConfig, on
 	})
 
 }
-func Status(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
-	cmd := exec.Command("git", "-c", "color.status=always", "status")
+func Status(repoName string, repoPath string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+	cmd := exec.Command("git", "-c", "color.status=always", "-C", repoPath, "status")
+
 	cmd.Stderr = rc.StdErr
 	cmd.Stdout = rc.StdOut
 	err := cmd.Run()
@@ -49,13 +50,13 @@ func Status(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFin
 
 }
 
-func Pull(repoName string, branch string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+func Pull(repoName string, repoPath string, branch string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
 	var cmd *exec.Cmd
 	if strings.HasPrefix(branch, "origin") {
 		branchName := RemoveOriginFromBranchName(branch)
-		cmd = exec.Command("git", "pull", "origin", fmt.Sprintf("%s", branchName))
+		cmd = exec.Command("git", "-C", repoPath, "pull", "origin", fmt.Sprintf("%s", branchName))
 	} else {
-		cmd = exec.Command("git", "pull", "origin", fmt.Sprintf("%s", branch))
+		cmd = exec.Command("git", "-C", repoPath, "pull", "origin", fmt.Sprintf("%s", branch))
 	}
 	cmd.Stderr = rc.StdErr
 	cmd.Stdout = rc.StdOut
@@ -69,8 +70,10 @@ func Pull(repoName string, branch string, rc *RunConfig, onFinish func(onFinish 
 	})
 
 }
-func BranchName(repoName string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+func BranchName(repoName string, repoPath string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+	c := fmt.Sprintf("git -C %s symbolic-ref refs/remotes/origin/HEAD | sed s@^refs/remotes/origin/@@", repoPath)
+
+	cmd := exec.Command("bash", "-C", c)
 	cmd.Stderr = rc.StdErr
 	cmd.Stdout = rc.StdOut
 	err := cmd.Run()

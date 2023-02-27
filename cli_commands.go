@@ -93,6 +93,7 @@ func pullCommand() *cli.Command {
 				repo := repos[i]
 				state := states[i]
 				return func() (interface{}, error) {
+					fullPath := FullPathWithRepo(repo.Path, repo.Name)
 					branchRc := &RunConfig{
 						StdErr: &bytes.Buffer{},
 						StdOut: &bytes.Buffer{},
@@ -104,7 +105,7 @@ func pullCommand() *cli.Command {
 					if repo.Branch != "" {
 						branch = repo.Branch
 					} else {
-						BranchName(repo.Name, branchRc, func(onFinish *CommandOnFinish) {
+						BranchName(repo.Name, fullPath, branchRc, func(onFinish *CommandOnFinish) {
 							if onFinish.Failed {
 								branch = "master"
 							} else {
@@ -112,7 +113,7 @@ func pullCommand() *cli.Command {
 							}
 						})
 					}
-					Pull(repo.Name, branch, rc, func(onFinish *CommandOnFinish) {
+					Pull(repo.Name, fullPath, branch, rc, func(onFinish *CommandOnFinish) {
 						if onFinish.Failed {
 							state.State = StateError
 							state.Msg = fmt.Sprintf("Failed to pull %s", repo.Name)
@@ -140,7 +141,7 @@ func pullCommand() *cli.Command {
 				if onFinish.Failed {
 					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
 					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
-					fmt.Printf("🟡 Failed to clone %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+					fmt.Printf("🟡 Failed to pull %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
 				}
 			}
 			return nil
@@ -167,17 +168,28 @@ func statusCommand() *cli.Command {
 			config := ctx.Config
 			concurrency := len(config.Repos)
 			repos := config.Repos
+			states := make([]*SpinnerState, len(repos))
 			commandOnFinish := make([]*CommandOnFinish, len(repos))
+
+			for i, repo := range repos {
+				states[i] = &SpinnerState{
+					State: StateLoading,
+					Msg:   fmt.Sprintf("Pulling %s", repo.Name),
+				}
+			}
+
+			finishPrint := PrintSpinnerStates(os.Stdout, states)
 
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
 				repo := repos[i]
 				return func() (interface{}, error) {
+					fullPath := FullPathWithRepo(repo.Path, repo.Name)
 					rc := &RunConfig{
 						StdErr: &bytes.Buffer{},
 						StdOut: &bytes.Buffer{},
 					}
 
-					Status(repo.Name, rc, func(onFinish *CommandOnFinish) {
+					Status(repo.Name, fullPath, rc, func(onFinish *CommandOnFinish) {
 						commandOnFinish[i] = onFinish
 					})
 					return nil, nil
@@ -190,11 +202,16 @@ func statusCommand() *cli.Command {
 				}
 				Warning(res.Error.Error())
 			}
+			finishPrint()
 			for _, onFinish := range commandOnFinish {
 				if !onFinish.Failed {
 					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
 					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
 					fmt.Printf("🟢 Status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+				} else {
+					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
+					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
+					fmt.Printf("🔴 Failed to get status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
 				}
 			}
 			return nil
@@ -241,7 +258,7 @@ func cloneCommand() *cli.Command {
 						StdErr: &bytes.Buffer{},
 						StdOut: &bytes.Buffer{},
 					}
-					Clone(repo.Remote, repo.Path, repo.Name, rc, func(onFinish *CommandOnFinish) {
+					Clone(repo.Name, repo.Remote, repo.Path, rc, func(onFinish *CommandOnFinish) {
 						if onFinish.Failed {
 							state.State = StateError
 							state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)

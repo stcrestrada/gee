@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path"
 )
@@ -8,8 +9,8 @@ import (
 func GeeCreate(cwd string) error {
 	geeFile := path.Join(cwd, "gee.toml")
 	_, err := os.Stat(geeFile)
-	if err != nil {
-		return err
+	if err == nil {
+		return errors.New("gee.toml already exists in this directory (or a parent directory)")
 	}
 
 	_, err = os.Create(geeFile)
