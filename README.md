@@ -13,9 +13,18 @@ brew install gee
 ```
 brew upgrade gee
 ```
+### Brew Upgrade Caching Older version?
+##### Sometimes brew upgrade caches an older version and fails to upgrade to the latest, if that happens, try this
+```
+brew untap stcrestrada/gee
+brew tap stcrestrada/gee https://github.com/stcrestrada/gee
+brew install gee 
+```
 
+### Uninstall
+```brew uninstall gee```
 
-## initialize 
+### initialize 
 #### Creates a gee.toml file with all the git directories added to gee.toml
 ###### Run this command in the directory you want to manage with gee in
 ```
