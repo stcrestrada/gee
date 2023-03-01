@@ -16,7 +16,8 @@ brew upgrade gee
 
 
 ## initialize 
-#### Creates a gee.toml file with all the git directories
+#### Creates a gee.toml file with all the git directories added to gee.toml
+###### Run this command in the directory you want to manage with gee in
 ```
 gee init
 ```
@@ -38,3 +39,17 @@ gee status
 ```
 gee pull
 ```
+
+## Git Clone
+###### remote must be added manually in order for gee clone to work 
+```
+gee clone
+```
+
+## gee.toml Example
+###### 
+```
+[[repos]]
+name = "gee"
+path = "/Users/stcrestrada/Projects"
+remote = "git@github.com:stcrestrada/gee.git"
