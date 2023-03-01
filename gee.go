@@ -14,7 +14,7 @@ var validate *validator.Validate
 
 func main() {
 	app.Commands = []*cli.Command{
-		createCommand(),
+		initCommand(),
 		addCommand(),
 		pullCommand(),
 		statusCommand(),

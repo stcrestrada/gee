@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"strings"
 )
 
 type RunConfig struct {
@@ -50,14 +49,8 @@ func Status(repoName string, repoPath string, rc *RunConfig, onFinish func(onFin
 
 }
 
-func Pull(repoName string, repoPath string, branch string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
-	var cmd *exec.Cmd
-	if strings.HasPrefix(branch, "origin") {
-		branchName := RemoveOriginFromBranchName(branch)
-		cmd = exec.Command("git", "-C", repoPath, "pull", "origin", fmt.Sprintf("%s", branchName))
-	} else {
-		cmd = exec.Command("git", "-C", repoPath, "pull", "origin", fmt.Sprintf("%s", branch))
-	}
+func Pull(repoName string, repoPath string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+	cmd := exec.Command("git", "-C", repoPath, "pull")
 	cmd.Stderr = rc.StdErr
 	cmd.Stdout = rc.StdOut
 	err := cmd.Run()

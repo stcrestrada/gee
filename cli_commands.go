@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-func createCommand() *cli.Command {
+func initCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "create",
+		Name:  "init",
 		Usage: "create gee.toml",
 		Action: func(context *cli.Context) error {
 			cwd, err := os.Getwd()
@@ -90,37 +90,27 @@ func pullCommand() *cli.Command {
 			finishPrint := PrintSpinnerStates(os.Stdout, states)
 
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
-				var branch string
 				repo := repos[i]
 				state := states[i]
 				return func() (interface{}, error) {
 					fullPath := FullPathWithRepo(repo.Path, repo.Name)
-					branchRc := &RunConfig{
-						StdErr: &bytes.Buffer{},
-						StdOut: &bytes.Buffer{},
+
+					errr := GetOrCreateDir(repo.Path)
+					if errr != nil {
+						return nil, errr
 					}
+
 					rc := &RunConfig{
 						StdErr: &bytes.Buffer{},
 						StdOut: &bytes.Buffer{},
 					}
-					if repo.Branch != "" {
-						branch = repo.Branch
-					} else {
-						BranchName(repo.Name, fullPath, branchRc, func(onFinish *CommandOnFinish) {
-							if onFinish.Failed {
-								branch = "master"
-							} else {
-								branch = branchRc.StdOut.String()
-							}
-						})
-					}
-					Pull(repo.Name, fullPath, branch, rc, func(onFinish *CommandOnFinish) {
+
+					Pull(repo.Name, fullPath, rc, func(onFinish *CommandOnFinish) {
 						if onFinish.Failed {
-							if strings.Contains(onFinish.RunConfig.StdErr.String(), "No such file or directory") {
-								onFinish.Failed = false
+							if strings.Contains(onFinish.RunConfig.StdErr.String(), "No such file or directory") && repo.Remote != "" {
 								state.Msg = fmt.Sprintf("Cloning instead...")
-								Clone(repo.Name, repo.Remote, repo.Path, rc, func(onFinish *CommandOnFinish) {
-									if onFinish.Failed {
+								Clone(repo.Name, repo.Remote, repo.Path, rc, func(onF *CommandOnFinish) {
+									if onF.Failed {
 										if strings.Contains(rc.StdErr.String(), "already exists") {
 											onFinish.Failed = false
 											state.State = StateSuccess
@@ -131,10 +121,10 @@ func pullCommand() *cli.Command {
 										}
 
 									} else {
+										onFinish.Failed = false
 										state.State = StateSuccess
 										state.Msg = fmt.Sprintf("Finished cloning %s", repo.Name)
 									}
-									commandOnFinish[i] = onFinish
 								})
 							} else {
 								state.State = StateError
@@ -276,6 +266,10 @@ func cloneCommand() *cli.Command {
 				repo := repos[i]
 				state := states[i]
 				return func() (interface{}, error) {
+					errr := GetOrCreateDir(repo.Path)
+					if errr != nil {
+						return nil, errr
+					}
 					rc := &RunConfig{
 						StdErr: &bytes.Buffer{},
 						StdOut: &bytes.Buffer{},

@@ -27,17 +27,17 @@ func WriteRepoToConfig(ctx *GeeContext, cwd string) error {
 		config.Repos = []Repo{}
 		repo := Repo{
 			Name: name,
-			Path: cwd,
+			Path: path.Dir(cwd),
 		}
 		config.Repos = append(config.Repos, repo)
 
 	} else {
-		if err := repoExists(config.Repos, name); err != nil {
+		if err := repoExists(config.Repos, cwd, name); err != nil {
 			return err
 		}
 		config.Repos = append(config.Repos, Repo{
 			Name: name,
-			Path: cwd,
+			Path: path.Dir(cwd),
 		})
 	}
 
@@ -54,10 +54,10 @@ func WriteRepoToConfig(ctx *GeeContext, cwd string) error {
 	return err
 }
 
-func repoExists(repos []Repo, name string) error {
+func repoExists(repos []Repo, cwd string, name string) error {
 	var err error
 	for _, repo := range repos {
-		if repo.Name == name {
+		if repo.Name == name && repo.Path == cwd {
 			errMsg := fmt.Sprintf("Repo %s already exists.", name)
 			err = errors.New(errMsg)
 			break
@@ -82,7 +82,6 @@ func NewDummyGeeContext(cwd string) *GeeContext {
 				Name:   "gee",
 				Path:   cwd,
 				Remote: "git@github.com:stcrestrada/gee.git",
-				Branch: "main",
 			},
 		},
 	}
@@ -119,4 +118,12 @@ func FullPathWithRepo(repoPath string, repoName string) string {
 		return repoPath
 	}
 	return path.Join(repoPath, repoName)
+}
+
+func GetOrCreateDir(path string) error {
+	if stat, err := os.Stat(path); err == nil && stat.IsDir() {
+		// path is a directory
+		return nil
+	}
+	return os.MkdirAll(path, 0755)
 }
