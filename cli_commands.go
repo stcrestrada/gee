@@ -7,6 +7,7 @@ import (
 	"github.com/stcrestrada/gogo"
 	"github.com/urfave/cli/v2"
 	"os"
+	"strings"
 )
 
 func createCommand() *cli.Command {
@@ -174,7 +175,7 @@ func statusCommand() *cli.Command {
 			for i, repo := range repos {
 				states[i] = &SpinnerState{
 					State: StateLoading,
-					Msg:   fmt.Sprintf("Pulling %s", repo.Name),
+					Msg:   fmt.Sprintf("Status pulling for %s", repo.Name),
 				}
 			}
 
@@ -260,8 +261,14 @@ func cloneCommand() *cli.Command {
 					}
 					Clone(repo.Name, repo.Remote, repo.Path, rc, func(onFinish *CommandOnFinish) {
 						if onFinish.Failed {
-							state.State = StateError
-							state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)
+							if strings.Contains(rc.StdErr.String(), "already exists") {
+								onFinish.Failed = false
+								state.State = StateSuccess
+								state.Msg = fmt.Sprintf("Already cloned %s", repo.Name)
+							} else {
+								state.State = StateError
+								state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)
+							}
 
 						} else {
 							state.State = StateSuccess
