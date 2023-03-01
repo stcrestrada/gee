@@ -1,18 +1,37 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-
+	"github.com/pborman/indent"
 	"github.com/stcrestrada/gogo"
 	"github.com/urfave/cli/v2"
+	"os"
+	"strings"
 )
 
 func initCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "init",
-		Usage: "initialize gee directory and toml file",
+		Usage: "create gee.toml",
 		Action: func(context *cli.Context) error {
-			err := GeeInit()
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			err = GeeCreate(cwd)
+			if err == nil {
+				Info("Created gee.toml in %s \n", cwd)
+			} else {
+				return err
+			}
+
+			// insert dummy data into gee.toml
+			geeCtx := NewDummyGeeContext(cwd)
+			err = InsertConfigIntoGeeToml(geeCtx)
+			if err != nil {
+				return err
+			}
 			return err
 		},
 	}
@@ -23,124 +42,274 @@ func addCommand() *cli.Command {
 		Name:  "add",
 		Usage: "add repo to gee.toml",
 		Action: func(context *cli.Context) error {
-			err := GeeAdd()
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			ctx, err := LoadConfig(cwd)
+			if err != nil {
+				Warning("Warning: %s \n", err)
+				return nil
+			}
+
+			err = GeeAdd(ctx, cwd)
 			return err
 		},
 	}
 }
 
-func pullCommand(config *Config) *cli.Command {
+func pullCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "pull",
 		Usage: "Git pull and update all repos",
 		Action: func(c *cli.Context) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			ctx, err := LoadConfig(cwd)
+			if err != nil {
+				Warning("Warning: %s \n", err)
+				return nil
+			}
+
+			config := ctx.Config
 			concurrency := len(config.Repos)
 			repos := config.Repos
+			states := make([]*SpinnerState, len(repos))
+			commandOnFinish := make([]*CommandOnFinish, len(repos))
+
+			for i, repo := range repos {
+				states[i] = &SpinnerState{
+					State: StateLoading,
+					Msg:   fmt.Sprintf("Pulling %s", repo.Name),
+				}
+			}
+
+			finishPrint := PrintSpinnerStates(os.Stdout, states)
+
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
 				repo := repos[i]
+				state := states[i]
 				return func() (interface{}, error) {
-					output, err := GeePullAll(repo)
-					return output, err
+					fullPath := FullPathWithRepo(repo.Path, repo.Name)
+
+					errr := GetOrCreateDir(repo.Path)
+					if errr != nil {
+						return nil, errr
+					}
+
+					rc := &RunConfig{
+						StdErr: &bytes.Buffer{},
+						StdOut: &bytes.Buffer{},
+					}
+
+					Pull(repo.Name, fullPath, rc, func(onFinish *CommandOnFinish) {
+						if onFinish.Failed {
+							if strings.Contains(onFinish.RunConfig.StdErr.String(), "No such file or directory") && repo.Remote != "" {
+								state.Msg = fmt.Sprintf("Cloning instead...")
+								Clone(repo.Name, repo.Remote, repo.Path, rc, func(onF *CommandOnFinish) {
+									if onF.Failed {
+										if strings.Contains(rc.StdErr.String(), "already exists") {
+											onFinish.Failed = false
+											state.State = StateSuccess
+											state.Msg = fmt.Sprintf("Already cloned %s", repo.Name)
+										} else {
+											state.State = StateError
+											state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)
+										}
+
+									} else {
+										onFinish.Failed = false
+										state.State = StateSuccess
+										state.Msg = fmt.Sprintf("Finished cloning %s", repo.Name)
+									}
+								})
+							} else {
+								state.State = StateError
+								state.Msg = fmt.Sprintf("Failed to pull %s", repo.Name)
+							}
+						} else {
+							state.State = StateSuccess
+							state.Msg = fmt.Sprintf("Finished pulling %s", repo.Name)
+						}
+						commandOnFinish[i] = onFinish
+					})
+					return nil, nil
 				}
 			})
-			outputFeed := pool.Go()
-			for res := range outputFeed {
+
+			feed := pool.Go()
+			for res := range feed {
 				if res.Error == nil {
-					cmdOutput := res.Result.(*CommandOutput)
-					if cmdOutput.Warning {
-						Warning(string(cmdOutput.Output))
-					} else {
-						Info("Pulling Repo %s \n", cmdOutput.Repo)
-						println(string(cmdOutput.Output))
-						Info("Finished Pulling %s \n", cmdOutput.Repo)
-					}
 					continue
 				}
 				Warning(res.Error.Error())
+			}
+			finishPrint()
+			os.Stdout.Write([]byte("\n\n"))
+			for _, onFinish := range commandOnFinish {
+				if onFinish.Failed {
+					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
+					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
+					fmt.Printf("🟡 Failed to pull %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+				}
 			}
 			return nil
 		},
 	}
 }
 
-func statusCommand(config *Config) *cli.Command {
+func statusCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "status",
 		Usage: "Git status of all repos",
 		Action: func(c *cli.Context) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			ctx, err := LoadConfig(cwd)
+			if err != nil {
+				Warning("Warning: %s \n", err)
+				return nil
+			}
+
+			config := ctx.Config
 			concurrency := len(config.Repos)
 			repos := config.Repos
+			states := make([]*SpinnerState, len(repos))
+			commandOnFinish := make([]*CommandOnFinish, len(repos))
+
+			for i, repo := range repos {
+				states[i] = &SpinnerState{
+					State: StateLoading,
+					Msg:   fmt.Sprintf("Status pulling for %s", repo.Name),
+				}
+			}
+
+			finishPrint := PrintSpinnerStates(os.Stdout, states)
+
 			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
 				repo := repos[i]
 				return func() (interface{}, error) {
-					output, err := GeeStatusAll(repo)
-					return output, err
+					fullPath := FullPathWithRepo(repo.Path, repo.Name)
+					rc := &RunConfig{
+						StdErr: &bytes.Buffer{},
+						StdOut: &bytes.Buffer{},
+					}
+
+					Status(repo.Name, fullPath, rc, func(onFinish *CommandOnFinish) {
+						commandOnFinish[i] = onFinish
+					})
+					return nil, nil
 				}
 			})
 			feed := pool.Go()
 			for res := range feed {
 				if res.Error == nil {
-					cmdOutput := res.Result.(*CommandOutput)
-					Info("Status of %s \n", cmdOutput.Repo)
-					println(string(cmdOutput.Output))
 					continue
 				}
 				Warning(res.Error.Error())
 			}
-			return nil
-		},
-	}
-}
-
-func removeStaleBranches(config *Config) *cli.Command {
-	return &cli.Command{
-		Name:  "remove-stale-branches",
-		Usage: "remove stale branch 'tmpmain'. Deprecating soon.",
-		Action: func(c *cli.Context) error {
-			concurrency := len(config.Repos)
-			repos := config.Repos
-			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
-				repo := repos[i]
-				return func() (interface{}, error) {
-					output, err := CleanupStaleBranches(repo)
-					return output, err
+			finishPrint()
+			for _, onFinish := range commandOnFinish {
+				if !onFinish.Failed {
+					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
+					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
+					fmt.Printf("🟢 Status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+				} else {
+					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
+					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
+					fmt.Printf("🔴 Failed to get status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
 				}
-			})
-			feed := pool.Go()
-			for res := range feed {
-				cmdOutput := res.Result.(*Repo)
-				if res.Error == nil {
-					Info("Deleted branch tmpmain from repository %s\n",  cmdOutput.Name)
-					continue
-				}
-				Warning("Ran for repository %s \n", cmdOutput.Name)
-				WarningRed(res.Error.Error())
 			}
 			return nil
 		},
 	}
 }
 
-// for testing purposes, will not import this command though
-func jsonCommand(config *Config) *cli.Command {
+func cloneCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "json",
-		Usage: "json this shit",
+		Name:  "clone",
+		Usage: "Git clone of all repos in gee.toml",
 		Action: func(c *cli.Context) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			ctx, err := LoadConfig(cwd)
+			if err != nil {
+				Warning("Warning: %s \n", err)
+				return nil
+			}
+
+			config := ctx.Config
+			concurrency := len(config.Repos)
 			repos := config.Repos
+			states := make([]*SpinnerState, len(repos))
+			commandOnFinish := make([]*CommandOnFinish, len(repos))
 
-			fmt.Printf("%d \n", len(repos))
-			for _, r := range repos {
-				//commit := fmt.Sprintf("%d +123456", idx)
-				//err := WriteRepoLastCommitToJSON(r.Name, commit)
-				//if err != nil {
-				//	CheckIfError(err)
-				//}
-				_, err := DeleteTmpBranch(r)
-				fmt.Printf("\n")
-				fmt.Printf("EEROR: %s \n", err)
-				fmt.Printf("\n")
+			for i, repo := range repos {
+				states[i] = &SpinnerState{
+					State: StateLoading,
+					Msg:   fmt.Sprintf("Cloning %s", repo.Name),
+				}
+			}
 
+			finishPrint := PrintSpinnerStates(os.Stdout, states)
+
+			pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
+				repo := repos[i]
+				state := states[i]
+				return func() (interface{}, error) {
+					errr := GetOrCreateDir(repo.Path)
+					if errr != nil {
+						return nil, errr
+					}
+					rc := &RunConfig{
+						StdErr: &bytes.Buffer{},
+						StdOut: &bytes.Buffer{},
+					}
+					Clone(repo.Name, repo.Remote, repo.Path, rc, func(onFinish *CommandOnFinish) {
+						if onFinish.Failed {
+							if strings.Contains(rc.StdErr.String(), "already exists") {
+								onFinish.Failed = false
+								state.State = StateSuccess
+								state.Msg = fmt.Sprintf("Already cloned %s", repo.Name)
+							} else {
+								state.State = StateError
+								state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)
+							}
+
+						} else {
+							state.State = StateSuccess
+							state.Msg = fmt.Sprintf("Finished cloning %s", repo.Name)
+						}
+						commandOnFinish[i] = onFinish
+					})
+					return nil, nil
+				}
+			})
+
+			feed := pool.Go()
+			for res := range feed {
+				if res.Error == nil {
+					continue
+				}
+				Warning(res.Error.Error())
+			}
+			finishPrint()
+			os.Stdout.Write([]byte("\n\n"))
+			for _, onFinish := range commandOnFinish {
+				if onFinish.Failed {
+					stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
+					stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
+					fmt.Printf("🟡 Failed to clone %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+				}
 			}
 			return nil
 		},
