@@ -50,15 +50,20 @@ gee pull
 ```
 
 ## Git Clone
-###### remote must be added manually in order for gee clone to work 
+###### Requires user to manually add remote to gee.toml 
 ```
 gee clone
 ```
 
-## gee.toml Example
-###### 
+#### Example. Please manually add `remote` to gee.toml for gee clone to work.
 ```
 [[repos]]
 name = "gee"
 path = "/Users/stcrestrada/Projects"
 remote = "git@github.com:stcrestrada/gee.git"
+````
+
+#### Things to consider:
+- When manually configuring `gee.toml` make sure that name is the same as the repository name.
+- When manually configuring `gee.toml` make sure that path does not include the repository name.
+- When manually configuring `gee.toml` make sure that remote to leverage's `gee's` full potential.
