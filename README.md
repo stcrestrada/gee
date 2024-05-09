@@ -11,6 +11,7 @@ brew install gee
 ### Upgrade 
 
 ```
+brew update
 brew upgrade gee
 ```
 ### Brew Upgrade Caching Older version?
