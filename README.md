@@ -14,13 +14,6 @@ brew install gee
 brew update
 brew upgrade gee
 ```
-### Brew Upgrade Caching Older version?
-##### Sometimes brew upgrade caches an older version and fails to upgrade to the latest, if that happens, try this
-```
-brew untap stcrestrada/gee
-brew tap stcrestrada/gee https://github.com/stcrestrada/gee
-brew install gee 
-```
 
 ### Uninstall
 ```brew uninstall gee```
