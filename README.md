@@ -60,5 +60,5 @@ remote = "git@github.com:stcrestrada/gee.git"
 #### Things to consider:
 - When manually configuring `gee.toml` make sure that name is the same as the repository name.
 - When manually configuring `gee.toml` make sure that path does not include the repository name.
-- When manually configuring `gee.toml` make sure that remote to leverage's `gee's` full potential.
+- When manually configuring `gee.toml` make sure that remote is correct to leverage's `gee's` full potential.
 - A `gee.toml` can exist in multiple directories. For example if you run `gee create` inside of `/one/project/dev/`, `gee` will only look for `gee.toml` inside `/one/project/dev/`. If `gee command` is run inside `/one/project/` it will look for `gee.toml` inside `/one/project/`, if one does not exist, `gee` will move up to the next parent directory, `/one` and so on until it finds a `gee.toml` file. If no `gee.toml` is found, `gee` will return an error. 
