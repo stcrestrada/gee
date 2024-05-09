@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 type RunConfig struct {
@@ -63,19 +64,32 @@ func Pull(repoName string, repoPath string, rc *RunConfig, onFinish func(onFinis
 	})
 
 }
-func BranchName(repoName string, repoPath string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
-	c := fmt.Sprintf("git -C %s symbolic-ref refs/remotes/origin/HEAD | sed s@^refs/remotes/origin/@@", repoPath)
 
-	cmd := exec.Command("bash", "-C", c)
-	cmd.Stderr = rc.StdErr
-	cmd.Stdout = rc.StdOut
-	err := cmd.Run()
+func HandlePullFinish(repo *Repo, onFinish *CommandOnFinish, state *SpinnerState) {
+	switch {
+	case onFinish.Failed && strings.Contains(onFinish.RunConfig.StdErr.String(), "No such file or directory") && repo.Remote != "":
+		state.Msg = fmt.Sprintf("Cloning instead...")
+		Clone(repo.Name, repo.Remote, repo.Path, onFinish.RunConfig, HandleCloneFinish(repo, state))
+	case onFinish.Failed:
+		state.State = StateError
+		state.Msg = fmt.Sprintf("Failed to pull %s", repo.Name)
+	default:
+		Clone(repo.Name, repo.Remote, repo.Path, onFinish.RunConfig, HandleCloneFinish(repo, state))
+	}
+}
 
-	onFinish(&CommandOnFinish{
-		Repo:      repoName,
-		RunConfig: rc,
-		Failed:    err != nil,
-		Error:     err,
-	})
-
+func HandleCloneFinish(repo *Repo, state *SpinnerState) func(onFinish *CommandOnFinish) {
+	return func(onFinish *CommandOnFinish) {
+		switch {
+		case onFinish.Failed && strings.Contains(onFinish.RunConfig.StdErr.String(), "already exists"):
+			state.State = StateSuccess
+			state.Msg = fmt.Sprintf("Already cloned %s", repo.Name)
+		case onFinish.Failed:
+			state.State = StateError
+			state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)
+		default:
+			state.State = StateSuccess
+			state.Msg = fmt.Sprintf("Finished cloning %s", repo.Name)
+		}
+	}
 }

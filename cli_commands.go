@@ -106,36 +106,10 @@ func pullCommand() *cli.Command {
 					}
 
 					Pull(repo.Name, fullPath, rc, func(onFinish *CommandOnFinish) {
-						if onFinish.Failed {
-							if strings.Contains(onFinish.RunConfig.StdErr.String(), "No such file or directory") && repo.Remote != "" {
-								state.Msg = fmt.Sprintf("Cloning instead...")
-								Clone(repo.Name, repo.Remote, repo.Path, rc, func(onF *CommandOnFinish) {
-									if onF.Failed {
-										if strings.Contains(rc.StdErr.String(), "already exists") {
-											onFinish.Failed = false
-											state.State = StateSuccess
-											state.Msg = fmt.Sprintf("Already cloned %s", repo.Name)
-										} else {
-											state.State = StateError
-											state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)
-										}
-
-									} else {
-										onFinish.Failed = false
-										state.State = StateSuccess
-										state.Msg = fmt.Sprintf("Finished cloning %s", repo.Name)
-									}
-								})
-							} else {
-								state.State = StateError
-								state.Msg = fmt.Sprintf("Failed to pull %s", repo.Name)
-							}
-						} else {
-							state.State = StateSuccess
-							state.Msg = fmt.Sprintf("Finished pulling %s", repo.Name)
-						}
+						HandlePullFinish(&repo, onFinish, state)
 						commandOnFinish[i] = onFinish
 					})
+
 					return nil, nil
 				}
 			})
