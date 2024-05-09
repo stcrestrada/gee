@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	app *cli.App
+	app     *cli.App
+	version = "dev"
 )
 var validate *validator.Validate
 
@@ -35,5 +36,5 @@ func init() {
 	app = cli.NewApp()
 	app.Name = "gee"
 	app.Usage = "Gee gives user's control of git commands across repos without moving between them."
-	app.Version = "1.0.0"
+	app.Version = version
 }
