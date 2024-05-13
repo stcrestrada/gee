@@ -93,3 +93,18 @@ func HandleCloneFinish(repo *Repo, state *SpinnerState) func(onFinish *CommandOn
 		}
 	}
 }
+
+func GetRemoteURL(repoName string, repoPath string, rc *RunConfig, onFinish func(onFinish *CommandOnFinish)) {
+	cmd := exec.Command("git", "-C", repoPath, "config", "--get", "remote.origin.url")
+	cmd.Stderr = rc.StdErr
+	cmd.Stdout = rc.StdOut
+	err := cmd.Run()
+
+	onFinish(&CommandOnFinish{
+		Repo:      repoName,
+		Path:      repoPath,
+		RunConfig: rc,
+		Failed:    err != nil,
+		Error:     err,
+	})
+}

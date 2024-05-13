@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -23,11 +24,29 @@ func WriteRepoToConfig(ctx *GeeContext, cwd string) error {
 	name := directories[len(directories)-1]
 	config := ctx.Config
 
+	// Create a new RunConfig
+	rc := &RunConfig{
+		StdOut: new(bytes.Buffer),
+		StdErr: new(bytes.Buffer),
+	}
+
+	// Get the remote URL using the GetRemoteURL function
+	var remote string
+	GetRemoteURL(name, cwd, rc, func(onFinish *CommandOnFinish) {
+		if onFinish.Failed {
+			// Handle the error
+			fmt.Println("Error getting remote URL:", onFinish.Error)
+			return
+		}
+		remote = strings.TrimSpace(onFinish.RunConfig.StdOut.String())
+	})
+
 	if config.Repos == nil {
 		config.Repos = []Repo{}
 		repo := Repo{
-			Name: name,
-			Path: path.Dir(cwd),
+			Name:   name,
+			Path:   path.Dir(cwd),
+			Remote: remote,
 		}
 		config.Repos = append(config.Repos, repo)
 
@@ -36,8 +55,9 @@ func WriteRepoToConfig(ctx *GeeContext, cwd string) error {
 			return err
 		}
 		config.Repos = append(config.Repos, Repo{
-			Name: name,
-			Path: path.Dir(cwd),
+			Name:   name,
+			Path:   path.Dir(cwd),
+			Remote: remote,
 		})
 	}
 
@@ -65,13 +85,6 @@ func repoExists(repos []Repo, cwd string, name string) error {
 		continue
 	}
 	return err
-}
-
-func RemoveOriginFromBranchName(branch string) string {
-	// branch --> origin/master
-	parseBranchName := strings.Split(branch, "/")
-	grabLastItem := parseBranchName[len(parseBranchName)-1]
-	return grabLastItem
 }
 
 // Create New Gee Context with Filler Config
