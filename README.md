@@ -1,4 +1,4 @@
-# CLI tool that efficiently manages multiple Git repositories simultaneously
+# Gee: A CLI tool that efficiently manages multiple git repositories simultaneously
 
 It allows you to clone, pull, and check the status of repositories listed in a TOML file, leveraging concurrency for faster operations. Gee utilizes the [gogo](http://godoc.org/github.com/stcrestrada/gogo) library for enhanced functionality.
 
