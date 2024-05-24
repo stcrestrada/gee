@@ -1,6 +1,8 @@
 package main
 
 import (
+	"gee/cmd"
+	"gee/pkg/util"
 	"os"
 
 	"github.com/go-playground/validator/v10"
@@ -15,17 +17,17 @@ var validate *validator.Validate
 
 func main() {
 	app.Commands = []*cli.Command{
-		initCommand(),
-		addCommand(),
-		pullCommand(),
-		statusCommand(),
-		cloneCommand(),
+		cmd.InitCmd(),
+		cmd.AddCmd(),
+		cmd.PullCmd(),
+		cmd.StatusCmd(),
+		cmd.CloneCmd(),
 	}
 
 	// Run the CLI app
 	err := app.Run(os.Args)
 	if err != nil {
-		CheckIfError(err)
+		util.CheckIfError(err)
 		return
 	}
 }

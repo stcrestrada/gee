@@ -1,4 +1,6 @@
-package main
+package types
+
+import "bytes"
 
 type Repo struct {
 	// name of repo
@@ -21,4 +23,17 @@ type GeeConfigInfo struct {
 type GeeContext struct {
 	GeeConfigInfo
 	Config
+}
+
+type RunConfig struct {
+	StdOut *bytes.Buffer
+	StdErr *bytes.Buffer
+}
+
+type CommandOnFinish struct {
+	Repo      string
+	Path      string
+	RunConfig *RunConfig
+	Failed    bool
+	Error     error
 }

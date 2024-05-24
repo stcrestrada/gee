@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"fmt"
@@ -8,15 +8,15 @@ import (
 
 type State string
 
-const StateLoading = State("loading")
-const StateError = State("error")
-const StateSuccess = State("success")
-
 type SpinnerState struct {
 	State State
 	Msg   string
 	Err   string
 }
+
+const StateLoading = State("loading")
+const StateError = State("error")
+const StateSuccess = State("success")
 
 var spinnerUnicodeStates = []string{
 	"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏",

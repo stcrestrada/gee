@@ -1,24 +1,31 @@
-package main
+package util
 
 import (
 	"errors"
+	"gee/pkg/types"
 	"github.com/pelletier/go-toml"
 	"os"
 	"path"
 )
 
-func setConfig(config toml.Tree) (*Config, error) {
-	conf := Config{}
+type ConfigHelper struct {
+	// Add fields here for shared state or dependencies if needed
+}
+
+func NewConfigHelper() *ConfigHelper {
+	return &ConfigHelper{}
+}
+
+func (h *ConfigHelper) SetConfig(config toml.Tree) (*types.Config, error) {
+	conf := types.Config{}
 	err := config.Unmarshal(&conf)
 	if err != nil {
 		return nil, err
 	}
-
 	return &conf, err
 }
 
-func FindConfig(cwd string, fileName string) (string, error) {
-	// if cwd is empty, we are in the root directory
+func (h *ConfigHelper) FindConfig(cwd string, fileName string) (string, error) {
 	if cwd == "" {
 		return "", errors.New("gee.toml not found")
 	}
@@ -30,18 +37,16 @@ func FindConfig(cwd string, fileName string) (string, error) {
 	if parentDir == cwd {
 		return "", errors.New("gee.toml not found")
 	}
-	return FindConfig(parentDir, fileName)
+	return h.FindConfig(parentDir, fileName)
 }
 
-func LoadConfig(cwd string) (*GeeContext, error) {
-	var geeConfig *GeeConfigInfo
-
+func (h *ConfigHelper) LoadConfig(cwd string) (*types.GeeContext, error) {
 	fileName := "gee.toml"
-	configFile, err := FindConfig(cwd, fileName)
+	configFile, err := h.FindConfig(cwd, fileName)
 	if err != nil {
 		return nil, err
 	}
-	geeConfig = &GeeConfigInfo{
+	geeConfig := &types.GeeConfigInfo{
 		ConfigFile:     configFile,
 		ConfigFilePath: path.Dir(configFile),
 	}
@@ -51,14 +56,13 @@ func LoadConfig(cwd string) (*GeeContext, error) {
 		return nil, err
 	}
 
-	conf, err := setConfig(*tomlConfig)
+	conf, err := h.SetConfig(*tomlConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return &GeeContext{
-		*geeConfig,
-		*conf,
+	return &types.GeeContext{
+		GeeConfigInfo: *geeConfig,
+		Config:        *conf,
 	}, nil
-
 }
