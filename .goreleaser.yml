@@ -6,7 +6,7 @@ before:
     - go generate ./...
 project_name: gee
 builds:
-  - id: gee
+  - id: gee_main_build
     main: ./main.go
   - env:
       - CGO_ENABLED=0
