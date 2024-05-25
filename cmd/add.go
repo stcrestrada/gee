@@ -9,12 +9,12 @@ import (
 )
 
 type AddCommand struct {
-	Git       *command.GitRepoOperation
+	Git       command.GitRepoOperation
 	RepoUtils *util.RepoUtils
 }
 
 func NewAddCommand() *AddCommand {
-	repoOp := &command.GitRepoOperation{}
+	repoOp := command.GitRepoOperation{}
 	return &AddCommand{
 		Git:       repoOp,
 		RepoUtils: util.NewRepoUtils(repoOp),
@@ -35,13 +35,11 @@ func AddCmd() *cli.Command {
 func (cmd *AddCommand) Run() error {
 	cwd, err := cmd.GetWorkingDirectory()
 	if err != nil {
-		util.Warning("Warning: %s \n", err)
 		return err
 	}
 
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
-		util.Warning("Warning: %s \n", err)
 		return err
 	}
 

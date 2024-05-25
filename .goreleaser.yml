@@ -1,90 +1,50 @@
-before:
-  hooks:
-    # You may remove this if you don't use go modules.
-    - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
 project_name: gee
+
 builds:
-  - id: gee_main_build
+  - id: gee
     main: ./main.go
-  - env:
-      - CGO_ENABLED=0
+    binary: gee
     goos:
       - linux
       - windows
       - darwin
     goarch:
       - amd64
+      - 386
       - arm64
-    goarm:
-      - 6
-      - 7
-    ldflags:
-      - -s -w -X main.version={{.Version}}
-    ignore:
+    ldflags: -s -w -X main.version={{.Version}}
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - format_overrides:
       - goos: windows
-        goarch: arm64
+        format: zip
+
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "{{.ProjectName}}_checksums.txt"
+
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: "{{ .Tag }}-SNAPSHOT"
+
+brews:
+  - name: gee
+    homepage: "https://github.com/stcrestrada/gee"
+    description: "CLI tool that efficiently manages multiple Git repositories simultaneously."
+    license: "MIT"
+    url_template: "https://github.com/stcrestrada/gee/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    install: |
+      bin.install "gee"
+    test: |
+      system "#{bin}/gee --version"
+
 changelog:
-  sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"
 
-# .goreleaser.yml
-brews:
-  -
-    # Name template of the recipe
-    # Default to project name
+release:
+  github:
+    owner: stcrestrada
     name: gee
-
-    # GOARM to specify which 32-bit arm version to use if there are multiple versions
-    # from the build section. Brew formulas support atm only one 32-bit version.
-    # Default is 6 for all artifacts or each id if there a multiple versions.
-    goarm: 6
-
-    # NOTE: make sure the url_template, the token and given repo (github or gitlab) owner and name are from the
-    # same kind. We will probably unify this in the next major version like it is done with scoop.
-
-    # GitHub/GitLab repository to push the formula to
-    # Gitea is not supported yet, but the support coming
-    tap:
-      owner: stcrestrada
-      name: gee
-
-    # Template for the url which is determined by the given Token (github or gitlab)
-    # Default for github is "https://github.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    # Default for gitlab is "https://gitlab.com/<repo_owner>/<repo_name>/-/releases/{{ .Tag }}/downloads/{{ .ArtifactName }}"
-    # Default for gitea is "https://gitea.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    url_template: "https://github.com/stcrestrada/gee/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-
-    # Git author used to commit to the repository.
-    # Defaults are shown.
-    commit_author:
-      name: Stephen Estrada
-      email: stcrestrada@gmail.com
-
-    # Your app's homepage.
-    # Default is empty.
-    homepage: "https://github.com/stcrestrada/gee"
-
-    # Template of your app's description.
-    # Default is empty.
-    description: "Manage all your git repos simultaneously."
-
-    # SPDX identifier of your app's license.
-    # Default is empty.
-    license: "MIT"
-
-    # Setting this will prevent goreleaser to actually try to commit the updated
-    # formula - instead, the formula file will be stored on the dist folder only,
-    # leaving the responsibility of publishing it to the user.
-    # If set to auto, the release will not be uploaded to the homebrew tap
-    # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
-    # Default is false.
-    skip_upload: false

@@ -14,12 +14,12 @@ import (
 )
 
 type PullCommand struct {
-	Git       *command.GitRepoOperation
+	Git       command.GitRepoOperation
 	RepoUtils *util.RepoUtils
 }
 
 func NewPullCommand() *PullCommand {
-	repoOp := &command.GitRepoOperation{}
+	repoOp := command.GitRepoOperation{}
 	return &PullCommand{
 		Git:       repoOp,
 		RepoUtils: util.NewRepoUtils(repoOp),

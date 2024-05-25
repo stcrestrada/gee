@@ -15,12 +15,12 @@ import (
 )
 
 type CloneCommand struct {
-	Git       *command.GitRepoOperation
+	Git       command.GitRepoOperation
 	RepoUtils *util.RepoUtils
 }
 
 func NewCloneCommand() *CloneCommand {
-	repoOp := &command.GitRepoOperation{}
+	repoOp := command.GitRepoOperation{}
 	return &CloneCommand{
 		Git:       repoOp,
 		RepoUtils: util.NewRepoUtils(repoOp),
@@ -41,8 +41,7 @@ func CloneCmd() *cli.Command {
 func (cmd *CloneCommand) Run() error {
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
-		util.Warning("Warning: %s \n", err)
-		return err
+		return util.NewWarning(err.Error())
 	}
 
 	repos := ctx.Config.Repos

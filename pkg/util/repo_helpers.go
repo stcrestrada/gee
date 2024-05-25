@@ -14,10 +14,10 @@ import (
 )
 
 type RepoUtils struct {
-	RepoOp command.RepoOperation
+	RepoOp command.GitRepoOperation
 }
 
-func NewRepoUtils(repoOp command.RepoOperation) *RepoUtils {
+func NewRepoUtils(repoOp command.GitRepoOperation) *RepoUtils {
 	return &RepoUtils{
 		RepoOp: repoOp,
 	}
@@ -43,8 +43,13 @@ func (r *RepoUtils) GeeCreate(cwd string) error {
 func (r *RepoUtils) GeeAdd(ctx *types.GeeContext, cwd string) error {
 	exists, err := r.FileExists(".git")
 	if !exists {
-		Warning("Not a git initialized repo, .git dir does not exist")
-		return err
+		return NewWarning("Not a git initialized repo, .git dir does not exist")
+	}
+	paths := strings.Split(cwd, "/")
+	name := paths[len(paths)-1]
+	err = r.RepoExists(ctx.Repos, cwd, name)
+	if err != nil {
+		return NewWarning(fmt.Sprintf("%s already in gee.toml", name))
 	}
 	err = r.WriteRepoToConfig(ctx, cwd)
 	return err
@@ -128,21 +133,19 @@ func (r *RepoUtils) WriteRepoToConfig(ctx *types.GeeContext, cwd string) error {
 	if err != nil {
 		return err
 	}
-	Info("Successfully added repo in %s", cwd)
-	return nil
+	return NewInfo(fmt.Sprintf("Successfully added repo in %s", cwd))
 }
 
 // RepoExists checks if the repository already exists in the provided list
 func (r *RepoUtils) RepoExists(repos []types.Repo, cwd string, name string) error {
 	for _, repo := range repos {
-		if repo.Path == cwd && repo.Name == name {
-			return fmt.Errorf("repository %s already exists at %s", name, cwd)
+		pathToRepo := path.Join(repo.Path, repo.Name)
+		if pathToRepo == cwd && repo.Name == name {
+			return NewWarning(fmt.Sprintf("repository %s already exists at %s", name, cwd))
 		}
 	}
 	return nil
 }
-
-// Other utility methods follow here...
 
 // FileExists checks if a file with the given name exists
 func (r *RepoUtils) FileExists(name string) (bool, error) {
@@ -201,7 +204,7 @@ func (r *RepoUtils) GetOrCreateDir(dirPath string) error {
 		return err
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("path %s exists and is not a directory", dirPath)
+		return NewWarning(fmt.Sprintf("path %s exists and is not a directory", dirPath))
 	}
 	return nil
 }

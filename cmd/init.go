@@ -9,12 +9,12 @@ import (
 )
 
 type InitCommand struct {
-	Git       *command.GitRepoOperation
+	Git       command.GitRepoOperation
 	RepoUtils *util.RepoUtils
 }
 
 func NewInitCommand() *InitCommand {
-	repoOp := &command.GitRepoOperation{}
+	repoOp := command.GitRepoOperation{}
 	return &InitCommand{
 		Git:       repoOp,
 		RepoUtils: util.NewRepoUtils(repoOp),
@@ -22,11 +22,11 @@ func NewInitCommand() *InitCommand {
 }
 
 func InitCmd() *cli.Command {
+	initCmd := NewInitCommand()
 	return &cli.Command{
 		Name:  "init",
 		Usage: "create gee.toml",
 		Action: func(context *cli.Context) error {
-			initCmd := NewInitCommand()
 			return initCmd.Run()
 		},
 	}

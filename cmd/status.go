@@ -14,12 +14,12 @@ import (
 )
 
 type StatusCommand struct {
-	Git       *command.GitRepoOperation
+	Git       command.GitRepoOperation
 	RepoUtils *util.RepoUtils
 }
 
 func NewStatusCommand() *StatusCommand {
-	repoOp := &command.GitRepoOperation{}
+	repoOp := command.GitRepoOperation{}
 	return &StatusCommand{
 		Git:       repoOp,
 		RepoUtils: util.NewRepoUtils(repoOp),
@@ -40,7 +40,7 @@ func StatusCmd() *cli.Command {
 func (cmd *StatusCommand) Run() error {
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
-		util.Warning("Warning: %s \n", err)
+		util.Warning("Warning: %s", err)
 		return err
 	}
 
@@ -71,15 +71,11 @@ func (cmd *StatusCommand) Run() error {
 			cmd.Git.Status(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
 				commandOnFinish[i] = onFinish
 				if !onFinish.Failed {
-					states[i] = &ui.SpinnerState{
-						State: ui.StateSuccess,
-						Msg:   fmt.Sprintf("successfully retrieved status for %s", onFinish.Repo),
-					}
+					states[i].State = ui.StateSuccess
+					states[i].Msg = fmt.Sprintf("successfully retrieved status for %s", onFinish.Repo)
 				} else {
-					states[i] = &ui.SpinnerState{
-						State: ui.StateError,
-						Msg:   fmt.Sprintf("failed to pull status for %s", onFinish.Repo),
-					}
+					states[i].State = ui.StateError
+					states[i].Msg = fmt.Sprintf("failed to pull status for %s", onFinish.Repo)
 				}
 			})
 			return nil, nil

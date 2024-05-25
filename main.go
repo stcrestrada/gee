@@ -27,8 +27,14 @@ func main() {
 	// Run the CLI app
 	err := app.Run(os.Args)
 	if err != nil {
-		util.CheckIfError(err)
-		return
+		switch err.(type) {
+		case *util.InfoError:
+			util.Info("Information: %s", err.Error())
+		case *util.WarningError:
+			util.Warning("Warning: %s", err.Error())
+		default:
+			util.CheckIfError(err)
+		}
 	}
 }
 
