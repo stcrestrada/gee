@@ -32,12 +32,12 @@ func PullCmd() *cli.Command {
 		Name:  "pull",
 		Usage: "Git pull and update all repos",
 		Action: func(c *cli.Context) error {
-			return pullCmd.Run()
+			return pullCmd.Run(c)
 		},
 	}
 }
 
-func (cmd *PullCommand) Run() error {
+func (cmd *PullCommand) Run(c *cli.Context) error {
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
 		util.Warning("Warning: %s \n", err)

@@ -26,13 +26,13 @@ func InitCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "init",
 		Usage: "create gee.toml",
-		Action: func(context *cli.Context) error {
-			return initCmd.Run()
+		Action: func(c *cli.Context) error {
+			return initCmd.Run(c)
 		},
 	}
 }
 
-func (cmd *InitCommand) Run() error {
+func (cmd *InitCommand) Run(c *cli.Context) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		util.Warning("Warning: %s \n", err)

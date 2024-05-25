@@ -26,13 +26,13 @@ func AddCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "add",
 		Usage: "add repo to gee.toml",
-		Action: func(context *cli.Context) error {
-			return addCmd.Run()
+		Action: func(c *cli.Context) error {
+			return addCmd.Run(c)
 		},
 	}
 }
 
-func (cmd *AddCommand) Run() error {
+func (cmd *AddCommand) Run(c *cli.Context) error {
 	cwd, err := cmd.GetWorkingDirectory()
 	if err != nil {
 		return err

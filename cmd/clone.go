@@ -33,12 +33,12 @@ func CloneCmd() *cli.Command {
 		Name:  "clone",
 		Usage: "Git clone of all repos in gee.toml",
 		Action: func(c *cli.Context) error {
-			return cloneCmd.Run()
+			return cloneCmd.Run(c)
 		},
 	}
 }
 
-func (cmd *CloneCommand) Run() error {
+func (cmd *CloneCommand) Run(c *cli.Context) error {
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
 		return util.NewWarning(err.Error())

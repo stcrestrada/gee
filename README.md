@@ -1,9 +1,18 @@
-# Gee: A CLI tool that efficiently manages multiple git repositories simultaneously
+# Gee: Efficiently Manage Multiple Git Repositories
 
-It allows you to clone, pull, and check the status of repositories listed in a TOML file, leveraging concurrency for faster operations. Gee utilizes the [gogo](http://godoc.org/github.com/stcrestrada/gogo) library for enhanced functionality.
+Gee is a powerful command-line tool designed to help you manage multiple git repositories seamlessly. It allows you to clone, pull, and check the status of repositories listed in a `gee.toml` configuration file, leveraging concurrency for faster operations.
 
-### install
+## Features
 
+- **Clone**: Clone multiple repositories listed in the `gee.toml` file.
+- **Pull**: Pull changes from the main branch for all repositories.
+- **Status**: Check the git status of all repositories.
+- **Remove**: Remove repositories from the `gee.toml` configuration.
+- **Add**: Add repository to `gee.toml` configuration.
+
+## Installation
+
+Install Gee using Homebrew:
 ```
 brew tap stcrestrada/gee https://github.com/stcrestrada/gee
 
@@ -21,46 +30,68 @@ brew upgrade gee
 ```brew uninstall gee```
 
 ### initialize 
-#### Creates a gee.toml file with all the git directories added to gee.toml
-###### Run this command in the directory you want to manage with gee in
+#### Create an initial gee.toml configuration file:
+
 ```
 gee init
 ```
 
-## Add repos 
-#### cd into the git directory and run this command, will add repos to gee.toml
+### Add Repository 
+#### Add a repository to the `gee.toml` file. Note that the `gee add` command must be run from inside a `.git` directory:
 ```
+cd path/to/repo
 gee add
 ```
 
-## Git status
+### Check Status 
 #### Check the status of all git directories added to gee.toml
 ```
 gee status
 ```
 
-## Git pull
-##### Pretty cool command. gee pull will pull all git changes as long as you're in the main branch. If you have uncommitted changes in the main branch, gee stashes those changes, pulls down and reapplies the uncommitted changes. 
+### Pull Changes 
+##### Pull changes from the main branch for all repositories:
 ```
 gee pull
 ```
 
-## Git Clone
-###### Requires user to manually add remote to gee.toml 
+### Remove Repository 
+##### Automatically detect from the current directory:
 ```
+gee remove 
+```
+##### Specify repository name using flag:
+```shell
+gee remove -r repo_name
+```
+##### OR
+```shell
+gee remove --repo repo_name
+```
+
+
+### Clone Repositories
+##### Clone all repositories listed in your gee.toml file:
+```shell
 gee clone
 ```
 
-#### Example. Please manually add `remote` to gee.toml for gee clone to work.
+## Configuration
+#### Manually Configure gee.toml
 ```
 [[repos]]
-name = "gee"
-path = "/Users/stcrestrada/Projects"
-remote = "git@github.com:stcrestrada/gee.git"
+name = "repo_name"
+path = "/path/to/repo"
+remote = "https://github.com/user/repo.git"
 ````
 
-#### Things to consider:
-- When manually configuring `gee.toml` make sure that name is the same as the repository name.
-- When manually configuring `gee.toml` make sure that path does not include the repository name.
-- When manually configuring `gee.toml` make sure that remote is correct to leverage's `gee's` full potential.
-- A `gee.toml` can exist in multiple directories. For example if you run `gee create` inside of `/one/project/dev/`, `gee` will only look for `gee.toml` inside `/one/project/dev/`. If `gee command` is run inside `/one/project/` it will look for `gee.toml` inside `/one/project/`, if one does not exist, `gee` will move up to the next parent directory, `/one` and so on until it finds a `gee.toml` file. If no `gee.toml` is found, `gee` will return an error. 
+### Finding gee.toml
+#### Gee searches for gee.toml in the current and parent directories. If no configuration file is found, an error will be returned.
+
+## FAQ and Troubleshooting
+### What if Gee cannot find the gee.toml?
+#### Ensure that the gee.toml file exists in the current or parent directories. Use gee init to create a new configuration if needed.
+
+## License
+#### Gee is licensed under the MIT License. See the LICENSE file for more information.
+

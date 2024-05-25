@@ -22,6 +22,7 @@ func main() {
 		cmd.PullCmd(),
 		cmd.StatusCmd(),
 		cmd.CloneCmd(),
+		cmd.RemoveCmd(),
 	}
 
 	// Run the CLI app

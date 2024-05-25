@@ -32,12 +32,12 @@ func StatusCmd() *cli.Command {
 		Name:  "status",
 		Usage: "Git status of all repos",
 		Action: func(c *cli.Context) error {
-			return statusCmd.Run()
+			return statusCmd.Run(c)
 		},
 	}
 }
 
-func (cmd *StatusCommand) Run() error {
+func (cmd *StatusCommand) Run(c *cli.Context) error {
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
 		util.Warning("Warning: %s", err)

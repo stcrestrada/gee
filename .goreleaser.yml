@@ -64,7 +64,7 @@ brews:
     homepage: "https://github.com/stcrestrada/gee"
     # Template of your app's description.
     # Default is empty.
-    description: "Manage all your git repos simultaneously."
+    description: "Efficiently Manage Multiple Git Repositories."
     # SPDX identifier of your app's license.
     # Default is empty.
     license: "MIT"
