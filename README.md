@@ -29,7 +29,7 @@ brew upgrade gee
 ### Uninstall
 ```brew uninstall gee```
 
-### initialize 
+### Initialize Configuration 
 #### Create an initial gee.toml configuration file:
 
 ```
