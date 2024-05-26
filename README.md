@@ -79,11 +79,14 @@ gee clone
 ## Configuration
 #### Manually Configure gee.toml
 ```
+ConfigFile = "/path/to/gee/gee.toml"
+ConfigFilePath = "/path/to/gee"
+
 [[repos]]
 name = "repo_name"
 path = "/path/to/repo"
 remote = "https://github.com/user/repo.git"
-````
+```
 
 ### Finding gee.toml
 #### Gee searches for gee.toml in the current and parent directories. If no configuration file is found, an error will be returned.
