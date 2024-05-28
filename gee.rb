@@ -5,21 +5,21 @@
 class Gee < Formula
   desc "Efficiently Manage Multiple Git Repositories."
   homepage "https://github.com/stcrestrada/gee"
-  version "2.1.1"
+  version "2.1.2"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/stcrestrada/gee/releases/download/v2.1.1/gee_2.1.1_darwin_amd64.tar.gz"
-      sha256 "2ab1986d5463f05899c46a4dc9d4e5f01d0f83054f781103604c84bb7864a006"
+      url "https://github.com/stcrestrada/gee/releases/download/v2.1.2/gee_2.1.2_darwin_amd64.tar.gz"
+      sha256 "b5a031cc7b000db8cbbce7f6f33add5a8ccc9d0d1944f872b061fe9a7de39200"
 
       def install
         bin.install "gee"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/stcrestrada/gee/releases/download/v2.1.1/gee_2.1.1_darwin_arm64.tar.gz"
-      sha256 "9baea11d17062321847abd131f0fcc0b482b94fd5fa8b2a5670e9ecd19aaf0dc"
+      url "https://github.com/stcrestrada/gee/releases/download/v2.1.2/gee_2.1.2_darwin_arm64.tar.gz"
+      sha256 "5aca96ffca4566cd3a6fc2714daf720d117579c09121cdb3bf7d39f308d00c0e"
 
       def install
         bin.install "gee"
@@ -29,16 +29,16 @@ class Gee < Formula
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/stcrestrada/gee/releases/download/v2.1.1/gee_2.1.1_linux_amd64.tar.gz"
-      sha256 "089f606f4004636af850da18c0ff939968b586151e982f011bbb91e7e5a520fc"
+      url "https://github.com/stcrestrada/gee/releases/download/v2.1.2/gee_2.1.2_linux_amd64.tar.gz"
+      sha256 "32d30f2605b410e01356e6d9bde2ee376bf750c78136e635b4a3a72723ffd9cd"
 
       def install
         bin.install "gee"
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/stcrestrada/gee/releases/download/v2.1.1/gee_2.1.1_linux_arm64.tar.gz"
-      sha256 "a1306301335f991cc9041ef50f60244377038f3fbf6b2901b55a5863e6693597"
+      url "https://github.com/stcrestrada/gee/releases/download/v2.1.2/gee_2.1.2_linux_arm64.tar.gz"
+      sha256 "10ad52c8b94a59087f806761a84c9e7b28947541a27582f86f45eef55510a78b"
 
       def install
         bin.install "gee"
