@@ -17,7 +17,7 @@ func NewConfigHelper() *ConfigHelper {
 	return &ConfigHelper{}
 }
 
-func (h *ConfigHelper) SetConfig(config toml.Tree) (*types.Config, error) {
+func (h *ConfigHelper) ParseConfig(config toml.Tree) (*types.Config, error) {
 	conf := types.Config{}
 	err := config.Unmarshal(&conf)
 	if err != nil {
@@ -67,7 +67,7 @@ func (h *ConfigHelper) LoadConfig(cwd string) (*types.GeeContext, error) {
 		return nil, err
 	}
 
-	conf, err := h.SetConfig(*tomlConfig)
+	conf, err := h.ParseConfig(*tomlConfig)
 	if err != nil {
 		return nil, err
 	}
