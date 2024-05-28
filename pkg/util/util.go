@@ -71,7 +71,7 @@ func (h *ConfigHelper) LoadConfig(cwd string) (*types.GeeContext, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	VerboseLog("loaded gee.toml from %s", geeConfig.ConfigFilePath)
 	return &types.GeeContext{
 		GeeConfigInfo: *geeConfig,
 		Config:        *conf,

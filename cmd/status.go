@@ -114,6 +114,5 @@ func (cmd *StatusCommand) LoadConfiguration() (*types.GeeContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	util.VerboseLog("loaded gee.toml configuration from %s", cwd)
 	return util.NewConfigHelper().LoadConfig(cwd)
 }
