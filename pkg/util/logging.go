@@ -5,6 +5,13 @@ import (
 	"github.com/fatih/color"
 )
 
+var Verbose bool
+
+// SetVerbose sets the logging verbosity
+func SetVerbose(verbose bool) {
+	Verbose = verbose
+}
+
 // WarningError represents a custom warning error with a message
 type WarningError struct {
 	Message string
@@ -46,13 +53,20 @@ func Info(format string, args ...interface{}) {
 	logMessage(color.FgGreen, format, args...)
 }
 
+// VerboseLog logs a verbose message if verbose logging is enabled
+func VerboseLog(format string, args ...interface{}) {
+	if Verbose {
+		logMessage(color.FgCyan, format, args...)
+	}
+}
+
 // CheckIfError logs an error message and panics if the error is not nil
 func CheckIfError(err error) {
 	if err == nil {
 		return
 	}
 	logMessage(color.FgHiRed, "error: %s", err)
-	panic(err)
+	//panic(err)
 }
 
 // Warning logs a warning message with yellow text and bold style

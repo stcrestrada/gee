@@ -53,6 +53,7 @@ func (cmd *RemoveCommand) Run(c *cli.Context) error {
 			return util.NewWarning("please specify the repository name to remove")
 		}
 	}
+	util.VerboseLog("removing repository %s", repoName)
 
 	// Load the configuration
 	geeCtx, err := cmd.LoadConfiguration()
@@ -98,6 +99,7 @@ func (cmd *RemoveCommand) LoadConfiguration() (*types.GeeContext, error) {
 	if err != nil {
 		return nil, err
 	}
+	util.VerboseLog("loaded gee.toml configuration from %s", cwd)
 	return util.NewConfigHelper().LoadConfig(cwd)
 }
 

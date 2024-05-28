@@ -63,6 +63,7 @@ func (cmd *PullCommand) Run(c *cli.Context) error {
 		repo := repos[i]
 		state := states[i]
 		return func() (interface{}, error) {
+			util.VerboseLog("pulling %s", repo.Name)
 			fullPath := cmd.RepoUtils.FullPathWithRepo(repo.Path, repo.Name)
 			err = cmd.RepoUtils.GetOrCreateDir(repo.Path)
 			if err != nil {
@@ -76,6 +77,7 @@ func (cmd *PullCommand) Run(c *cli.Context) error {
 			cmd.Git.Pull(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
 				cmd.RepoUtils.HandlePullFinish(&repo, onFinish, state)
 				commandOnFinish[i] = onFinish
+				util.VerboseLog("completed pulling %s", repo.Name)
 			})
 			return nil, nil
 		}
@@ -109,5 +111,6 @@ func (cmd *PullCommand) LoadConfiguration() (*types.GeeContext, error) {
 	if err != nil {
 		return nil, err
 	}
+	util.VerboseLog("loaded gee.toml configuration from %s", cwd)
 	return util.NewConfigHelper().LoadConfig(cwd)
 }

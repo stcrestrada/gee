@@ -38,7 +38,7 @@ func (cmd *InitCommand) Run(c *cli.Context) error {
 		util.Warning("Warning: %s \n", err)
 		return err
 	}
-
+	util.VerboseLog("initializing gee.toml in %s", cwd)
 	err = cmd.RepoUtils.GeeCreate(cwd)
 	if err != nil {
 		return err
@@ -48,6 +48,7 @@ func (cmd *InitCommand) Run(c *cli.Context) error {
 
 	// insert dummy data into gee.toml
 	geeCtx := cmd.RepoUtils.NewDummyGeeContext(cwd)
+	util.VerboseLog("adding dummy data to gee.toml")
 	err = cmd.RepoUtils.InsertConfigIntoGeeToml(geeCtx)
 	if err != nil {
 		return err
@@ -64,5 +65,6 @@ func (cmd *InitCommand) LoadConfiguration() (*types.GeeContext, error) {
 	if err != nil {
 		return nil, err
 	}
+	util.VerboseLog("loaded gee.toml configuration from %s", cwd)
 	return util.NewConfigHelper().LoadConfig(cwd)
 }

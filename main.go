@@ -16,6 +16,22 @@ var (
 var validate *validator.Validate
 
 func main() {
+	app.Flags = []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "verbose",
+			Usage: "Enable verbose logging",
+		},
+	}
+
+	app.Before = func(c *cli.Context) error {
+		verbose := c.Bool("verbose")
+		util.SetVerbose(verbose)
+		if verbose {
+			util.VerboseLog("Verbose logging enabled")
+		}
+		return nil
+	}
+
 	app.Commands = []*cli.Command{
 		cmd.InitCmd(),
 		cmd.AddCmd(),
