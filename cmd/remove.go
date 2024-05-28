@@ -53,7 +53,7 @@ func (cmd *RemoveCommand) Run(c *cli.Context) error {
 			return util.NewWarning("please specify the repository name to remove")
 		}
 	}
-	util.VerboseLog("removing repository %s", repoName)
+	util.VerboseLog("attempting to remove %s from gee.toml", repoName)
 
 	// Load the configuration
 	geeCtx, err := cmd.LoadConfiguration()
@@ -61,33 +61,29 @@ func (cmd *RemoveCommand) Run(c *cli.Context) error {
 		return err
 	}
 
-	repoPath := ""
-	for _, repo := range geeCtx.Repos {
+	var index *int
+	for i, repo := range geeCtx.Repos {
 		if repo.Name == repoName {
-			repoPath = repo.Path
+			index = &i
 			break
 		}
 	}
-	if repoPath == "" {
-		return util.NewWarning(fmt.Sprintf("repository %s not found in the configuration", repoName))
+	if index == nil {
+		return util.NewWarning(fmt.Sprintf("%s not found in gee.toml", repoName))
 	}
 
-	// update configuration
-	newRepos := []types.Repo{}
-	for _, repo := range geeCtx.Repos {
-		if repo.Name != repoName {
-			newRepos = append(newRepos, repo)
-		}
-	}
+	repoLength := len(geeCtx.Repos)
+	// update repos list in configuration
+	geeCtx.Repos[repoLength-1], geeCtx.Repos[*index] = geeCtx.Repos[*index], geeCtx.Repos[repoLength-1]
+	geeCtx.Repos = geeCtx.Repos[:repoLength-1]
 
-	geeCtx.Repos = newRepos
 	configHelper := util.NewConfigHelper()
 
 	err = configHelper.SaveConfig(geeCtx.ConfigFilePath, geeCtx)
 	if err != nil {
 		return util.NewWarning(err.Error())
 	}
-	return util.NewInfo(fmt.Sprintf("repository %s successfully remove", repoName))
+	return util.NewInfo(fmt.Sprintf("successfully removed %s from gee.toml", repoName))
 }
 
 func (cmd *RemoveCommand) GetWorkingDirectory() (string, error) {

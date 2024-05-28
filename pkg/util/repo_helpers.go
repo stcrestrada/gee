@@ -133,7 +133,7 @@ func (r *RepoUtils) WriteRepoToConfig(ctx *types.GeeContext, cwd string) error {
 	if err != nil {
 		return err
 	}
-	return NewInfo(fmt.Sprintf("Successfully added repo in %s", cwd))
+	return NewInfo(fmt.Sprintf("successfully added %s", name))
 }
 
 // RepoExists checks if the repository already exists in the provided list
