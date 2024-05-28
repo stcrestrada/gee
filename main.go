@@ -46,9 +46,9 @@ func main() {
 	if err != nil {
 		switch err.(type) {
 		case *util.InfoError:
-			util.Info("Information: %s", err.Error())
+			util.Info("%s", err.Error())
 		case *util.WarningError:
-			util.Warning("Warning: %s", err.Error())
+			util.Warning("%s", err.Error())
 		default:
 			util.CheckIfError(err)
 		}

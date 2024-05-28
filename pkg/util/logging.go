@@ -42,39 +42,39 @@ func NewInfo(message string) error {
 	}
 }
 
-// logMessage is a helper function to print messages with specific color attributes
-func logMessage(colorAttribute color.Attribute, format string, args ...interface{}) {
-	c := color.New(colorAttribute, color.Bold)
-	c.Printf("%s\n", fmt.Sprintf(format, args...))
+// logMessage is a helper function to print messages with specific color attributes and symbols
+func logMessage(symbolColor color.Attribute, symbol string, messageColor color.Attribute, format string, args ...interface{}) {
+	symbolColored := color.New(symbolColor, color.Bold).Sprintf(symbol)
+	messageColored := color.New(messageColor, color.Bold).Sprintf(format, args...)
+	fmt.Printf("%s %s\n", symbolColored, messageColored)
 }
 
-// Info logs an info message with green text and bold style
+// Info logs an info message with a green check mark and white message
 func Info(format string, args ...interface{}) {
-	logMessage(color.FgGreen, format, args...)
+	logMessage(color.FgGreen, "✓", color.FgWhite, format, args...)
 }
 
 // VerboseLog logs a verbose message if verbose logging is enabled
 func VerboseLog(format string, args ...interface{}) {
 	if Verbose {
-		logMessage(color.FgCyan, format, args...)
+		logMessage(color.FgCyan, "✓", color.FgWhite, format, args...)
 	}
 }
 
-// CheckIfError logs an error message and panics if the error is not nil
+// CheckIfError logs an error message with a red cross and panics if the error is not nil
 func CheckIfError(err error) {
 	if err == nil {
 		return
 	}
-	logMessage(color.FgHiRed, "error: %s", err)
-	//panic(err)
+	logMessage(color.FgHiRed, "✗", color.FgWhite, "error: %s", err)
 }
 
-// Warning logs a warning message with yellow text and bold style
+// Warning logs a warning message with a yellow exclamation mark and white message
 func Warning(format string, args ...interface{}) {
-	logMessage(color.FgYellow, format, args...)
+	logMessage(color.FgYellow, "!", color.FgWhite, format, args...)
 }
 
-// WarningRed logs a warning message with red text and bold style
+// WarningRed logs a warning message with a red exclamation mark and white message
 func WarningRed(format string, args ...interface{}) {
-	logMessage(color.FgRed, format, args...)
+	logMessage(color.FgRed, "✗", color.FgWhite, format, args...)
 }
