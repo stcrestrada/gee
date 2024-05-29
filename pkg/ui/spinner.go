@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"io"
 	"time"
 )
@@ -12,6 +13,12 @@ type SpinnerState struct {
 	State State
 	Msg   string
 	Err   string
+}
+
+func FormatSpinnerMessage(symbolColor color.Attribute, symbol string, messageColor color.Attribute, format string, args ...interface{}) string {
+	symbolColored := color.New(symbolColor, color.Bold).Sprintf(symbol)
+	messageColored := color.New(messageColor, color.Bold).Sprintf(format, args...)
+	return fmt.Sprintf("%s %s\n", symbolColored, messageColored)
 }
 
 const StateLoading = State("loading")
@@ -35,15 +42,19 @@ func PrintSpinnerStates(writer io.Writer, states []*SpinnerState) func() {
 
 		shouldContinue := false
 		for _, state := range states {
+			var formattedMessage string
 			spinnerIcon := spinnerUnicodeStates[i%len(spinnerUnicodeStates)]
 			if state.State == StateSuccess {
-				spinnerIcon = "✅"
+				spinnerIcon = "✓"
+				formattedMessage = FormatSpinnerMessage(color.FgGreen, spinnerIcon, color.FgWhite, state.Msg)
 			} else if state.State == StateError {
-				spinnerIcon = "❌"
+				spinnerIcon = "✗"
+				formattedMessage = FormatSpinnerMessage(color.FgRed, spinnerIcon, color.FgWhite, state.Msg)
 			} else {
 				shouldContinue = true
+				formattedMessage = FormatSpinnerMessage(color.FgWhite, spinnerIcon, color.FgWhite, state.Msg)
 			}
-			writer.Write([]byte(fmt.Sprintf("%s %s\n", spinnerIcon, state.Msg)))
+			writer.Write([]byte(formattedMessage))
 		}
 		return shouldContinue
 	}

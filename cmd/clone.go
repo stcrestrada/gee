@@ -52,7 +52,7 @@ func (cmd *CloneCommand) Run(c *cli.Context) error {
 	for i, repo := range repos {
 		states[i] = &ui.SpinnerState{
 			State: ui.StateLoading,
-			Msg:   fmt.Sprintf("Pulling %s", repo.Name),
+			Msg:   fmt.Sprintf("cloning %s", repo.Name),
 		}
 	}
 
@@ -78,15 +78,15 @@ func (cmd *CloneCommand) Run(c *cli.Context) error {
 					if strings.Contains(rc.StdErr.String(), "already exists") {
 						onFinish.Failed = false
 						state.State = ui.StateSuccess
-						state.Msg = fmt.Sprintf("Already cloned %s", repo.Name)
+						state.Msg = fmt.Sprintf("%s is already cloned", repo.Name)
 					} else {
 						state.State = ui.StateError
-						state.Msg = fmt.Sprintf("Failed to clone %s", repo.Name)
+						state.Msg = fmt.Sprintf("failed to clone %s", repo.Name)
 					}
 
 				} else {
 					state.State = ui.StateSuccess
-					state.Msg = fmt.Sprintf("Finished cloning %s", repo.Name)
+					state.Msg = fmt.Sprintf("finished cloning %s", repo.Name)
 				}
 				commandOnFinish[i] = onFinish
 			})

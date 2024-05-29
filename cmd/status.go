@@ -95,7 +95,7 @@ func (cmd *StatusCommand) Run(c *cli.Context) error {
 		if !onFinish.Failed {
 			stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
 			stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
-			fmt.Printf("🟢 Status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+			fmt.Printf("🟣 Status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
 		} else {
 			stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
 			stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())

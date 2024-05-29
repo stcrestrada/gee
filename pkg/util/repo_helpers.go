@@ -59,14 +59,23 @@ func (r *RepoUtils) GeeAdd(ctx *types.GeeContext, cwd string) error {
 func (r *RepoUtils) HandlePullFinish(repo *types.Repo, onFinish *types.CommandOnFinish, state *ui.SpinnerState) {
 	switch {
 	case onFinish.Failed && strings.Contains(onFinish.RunConfig.StdErr.String(), "No such file or directory") && repo.Remote != "":
-		state.Msg = fmt.Sprintf("Cloning instead...")
+		state.State = ui.StateLoading
+		state.Msg = fmt.Sprintf("pull operation failed: no such file or directory. cloning %s instead...", repo.Name)
+		onFinish.Failed = false
+		onFinish.Error = nil
+		rc := &types.RunConfig{
+			StdErr: &bytes.Buffer{},
+			StdOut: &bytes.Buffer{},
+		}
+		onFinish.RunConfig = rc
+
 		r.RepoOp.Clone(repo.Name, repo.Remote, repo.Path, onFinish.RunConfig, r.HandleCloneFinish(repo, state))
 	case onFinish.Failed:
 		state.State = ui.StateError
-		state.Msg = fmt.Sprintf("Failed to pull %s", repo.Name)
+		state.Msg = fmt.Sprintf("failed to pull %s", repo.Name)
 	default:
 		state.State = ui.StateSuccess
-		state.Msg = fmt.Sprintf("%s already up to date", onFinish.Repo)
+		state.Msg = fmt.Sprintf("%s is already up to date", onFinish.Repo)
 	}
 }
 

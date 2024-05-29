@@ -78,3 +78,9 @@ func Warning(format string, args ...interface{}) {
 func WarningRed(format string, args ...interface{}) {
 	logMessage(color.FgRed, "✗", color.FgWhite, format, args...)
 }
+
+func ReturnSpinnerOutput(symbolColor color.Attribute, symbol string, messageColor color.Attribute, format string, args ...interface{}) string {
+	symbolColored := color.New(symbolColor, color.Bold).Sprintf(symbol)
+	messageColored := color.New(messageColor, color.Bold).Sprintf(format, args...)
+	return fmt.Sprintf("%s %s\n", symbolColored, messageColored)
+}
