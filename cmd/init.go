@@ -49,7 +49,10 @@ func (cmd *InitCommand) Run(c *cli.Context) error {
 	// insert dummy data into gee.toml
 	geeCtx := cmd.RepoUtils.NewDummyGeeContext(cwd)
 	util.VerboseLog("adding dummy data to gee.toml")
-	err = cmd.RepoUtils.InsertConfigIntoGeeToml(geeCtx)
+	configHelper := util.NewConfigHelper()
+
+	err = configHelper.SaveConfig(geeCtx)
+
 	if err != nil {
 		return err
 	}

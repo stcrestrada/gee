@@ -79,7 +79,7 @@ func (cmd *RemoveCommand) Run(c *cli.Context) error {
 
 	configHelper := util.NewConfigHelper()
 
-	err = configHelper.SaveConfig(geeCtx.ConfigFilePath, geeCtx)
+	err = configHelper.SaveConfig(geeCtx)
 	if err != nil {
 		return util.NewWarning(err.Error())
 	}

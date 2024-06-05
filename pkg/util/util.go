@@ -6,7 +6,6 @@ import (
 	"github.com/pelletier/go-toml"
 	"os"
 	"path"
-	"path/filepath"
 )
 
 type ConfigHelper struct {
@@ -27,13 +26,12 @@ func (h *ConfigHelper) ParseConfig(config toml.Tree) (*types.Config, error) {
 }
 
 // SaveConfig writes the configuration to the gee.toml file
-func (h *ConfigHelper) SaveConfig(dir string, config *types.GeeContext) error {
-	configFilePath := filepath.Join(dir, "gee.toml")
+func (h *ConfigHelper) SaveConfig(config *types.GeeContext) error {
 	configTree, err := toml.Marshal(*config)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(configFilePath, configTree, 0644)
+	return os.WriteFile(config.ConfigFile, configTree, 0644)
 }
 
 func (h *ConfigHelper) FindConfig(cwd string, fileName string) (string, error) {
