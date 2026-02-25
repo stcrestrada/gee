@@ -1,8 +1,8 @@
 package util
 
 import (
+	"charm.land/lipgloss/v2"
 	"fmt"
-	"github.com/fatih/color"
 )
 
 var Verbose bool
@@ -42,22 +42,23 @@ func NewInfo(message string) error {
 	}
 }
 
-// logMessage is a helper function to print messages with specific color attributes and symbols
-func logMessage(symbolColor color.Attribute, symbol string, messageColor color.Attribute, format string, args ...interface{}) {
-	symbolColored := color.New(symbolColor, color.Bold).Sprintf(symbol)
-	messageColored := color.New(messageColor, color.Bold).Sprintf(format, args...)
-	fmt.Printf("%s %s\n", symbolColored, messageColored)
-}
+var (
+	styleSymbolGreen = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("2"))
+	styleSymbolRed   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1"))
+	styleSymbolYellow = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("3"))
+	styleSymbolCyan  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
+	styleMessage     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15"))
+)
 
 // Info logs an info message with a green check mark and white message
 func Info(format string, args ...interface{}) {
-	logMessage(color.FgGreen, "✓", color.FgWhite, format, args...)
+	fmt.Printf("%s %s\n", styleSymbolGreen.Render("✓"), styleMessage.Render(fmt.Sprintf(format, args...)))
 }
 
 // VerboseLog logs a verbose message if verbose logging is enabled
 func VerboseLog(format string, args ...interface{}) {
 	if Verbose {
-		logMessage(color.FgCyan, "✓", color.FgWhite, format, args...)
+		fmt.Printf("%s %s\n", styleSymbolCyan.Render("✓"), styleMessage.Render(fmt.Sprintf(format, args...)))
 	}
 }
 
@@ -66,21 +67,15 @@ func CheckIfError(err error) {
 	if err == nil {
 		return
 	}
-	logMessage(color.FgHiRed, "✗", color.FgWhite, "error: %s", err)
+	fmt.Printf("%s %s\n", styleSymbolRed.Render("✗"), styleMessage.Render(fmt.Sprintf("error: %s", err)))
 }
 
 // Warning logs a warning message with a yellow exclamation mark and white message
 func Warning(format string, args ...interface{}) {
-	logMessage(color.FgYellow, "!", color.FgWhite, format, args...)
+	fmt.Printf("%s %s\n", styleSymbolYellow.Render("!"), styleMessage.Render(fmt.Sprintf(format, args...)))
 }
 
 // WarningRed logs a warning message with a red exclamation mark and white message
 func WarningRed(format string, args ...interface{}) {
-	logMessage(color.FgRed, "✗", color.FgWhite, format, args...)
-}
-
-func ReturnSpinnerOutput(symbolColor color.Attribute, symbol string, messageColor color.Attribute, format string, args ...interface{}) string {
-	symbolColored := color.New(symbolColor, color.Bold).Sprintf(symbol)
-	messageColored := color.New(messageColor, color.Bold).Sprintf(format, args...)
-	return fmt.Sprintf("%s %s\n", symbolColored, messageColored)
+	fmt.Printf("%s %s\n", styleSymbolRed.Render("✗"), styleMessage.Render(fmt.Sprintf(format, args...)))
 }

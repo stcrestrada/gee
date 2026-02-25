@@ -11,8 +11,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
-	"github.com/pborman/indent"
 	"github.com/stcrestrada/gogo/v3"
 	"github.com/urfave/cli/v2"
 )
@@ -40,18 +40,12 @@ func ExecCmd() *cli.Command {
 	}
 }
 
-type execResult struct {
-	Repo   string
-	Stdout string
-	Stderr string
-	Failed bool
-}
-
 func (cmd *ExecCommand) Run(c *cli.Context) error {
 	if c.Args().Len() == 0 {
 		return util.NewWarning("no command provided. usage: gee exec <command>")
 	}
 
+	startTime := time.Now()
 	userCmd := strings.Join(c.Args().Slice(), " ")
 
 	geeCtx, err := cmd.LoadConfiguration()
@@ -112,19 +106,26 @@ func (cmd *ExecCommand) Run(c *cli.Context) error {
 	}
 
 	finishPrint()
-	fmt.Printf("\n$ %s\n\n", userCmd)
-	for _, r := range results {
-		emoji := "🟣"
-		label := r.Repo
-		if r.Failed {
-			emoji = "🔴"
-			label = fmt.Sprintf("Failed: %s", r.Repo)
+	fmt.Println()
+
+	repoResults := make([]ui.RepoResult, len(results))
+	for i, r := range results {
+		repoResults[i] = ui.RepoResult{
+			Name:   r.Repo,
+			Stdout: r.Stdout,
+			Stderr: r.Stderr,
+			Failed: r.Failed,
 		}
-		stdout := indent.String("        ", r.Stdout)
-		stderr := indent.String("        ", r.Stderr)
-		fmt.Printf("%s %s\n    Stdout:\n%s\n    StdErr:\n%s\n", emoji, label, stdout, stderr)
 	}
+	ui.RenderResults(fmt.Sprintf("$ %s", userCmd), repoResults, startTime)
 	return nil
+}
+
+type execResult struct {
+	Repo   string
+	Stdout string
+	Stderr string
+	Failed bool
 }
 
 func (cmd *ExecCommand) GetWorkingDirectory() (string, error) {

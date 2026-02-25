@@ -30,6 +30,11 @@ func (g *GitRepoOperation) Pull(repoName, repoPath string, rc *types.RunConfig, 
 	runGitCommand(cmd, rc, repoName, onFinish)
 }
 
+func (g *GitRepoOperation) StatusPorcelain(repoName, repoPath string, rc *types.RunConfig, onFinish func(onFinish *types.CommandOnFinish)) {
+	cmd := exec.Command("git", "-C", repoPath, "status", "--porcelain=v2", "--branch")
+	runGitCommand(cmd, rc, repoName, onFinish)
+}
+
 func (g *GitRepoOperation) GetRemoteURL(repoName, repoPath string, rc *types.RunConfig, onFinish func(onFinish *types.CommandOnFinish)) {
 	cmd := exec.Command("git", "-C", repoPath, "config", "--get", "remote.origin.url")
 	runGitCommand(cmd, rc, repoName, onFinish)

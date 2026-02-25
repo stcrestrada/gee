@@ -8,11 +8,12 @@ import (
 	"gee/pkg/types"
 	"gee/pkg/ui"
 	"gee/pkg/util"
-	"github.com/pborman/indent"
-	"github.com/stcrestrada/gogo/v3"
-	"github.com/urfave/cli/v2"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/stcrestrada/gogo/v3"
+	"github.com/urfave/cli/v2"
 )
 
 type CloneCommand struct {
@@ -40,6 +41,8 @@ func CloneCmd() *cli.Command {
 }
 
 func (cmd *CloneCommand) Run(c *cli.Context) error {
+	startTime := time.Now()
+
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
 		return util.NewWarning(err.Error())
@@ -100,14 +103,18 @@ func (cmd *CloneCommand) Run(c *cli.Context) error {
 		util.Warning(res.Error.Error())
 	}
 	finishPrint()
-	os.Stdout.Write([]byte("\n\n"))
-	for _, onFinish := range commandOnFinish {
-		if onFinish.Failed {
-			stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
-			stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
-			fmt.Printf("🟡 Failed to clone %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+	fmt.Println()
+
+	repoResults := make([]ui.RepoResult, len(repos))
+	for i, onFinish := range commandOnFinish {
+		repoResults[i] = ui.RepoResult{
+			Name:   repos[i].Name,
+			Stdout: onFinish.RunConfig.StdOut.String(),
+			Stderr: onFinish.RunConfig.StdErr.String(),
+			Failed: onFinish.Failed,
 		}
 	}
+	ui.RenderResults("clone", repoResults, startTime)
 	return nil
 }
 

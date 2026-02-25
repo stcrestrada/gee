@@ -8,10 +8,11 @@ import (
 	"gee/pkg/types"
 	"gee/pkg/ui"
 	"gee/pkg/util"
-	"github.com/pborman/indent"
+	"os"
+	"time"
+
 	"github.com/stcrestrada/gogo/v3"
 	"github.com/urfave/cli/v2"
-	"os"
 )
 
 type StatusCommand struct {
@@ -32,6 +33,12 @@ func StatusCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "status",
 		Usage: "Git status of all repos",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "verbose",
+				Usage: "Show full git status output instead of summary",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			return statusCmd.Run(c)
 		},
@@ -39,6 +46,9 @@ func StatusCmd() *cli.Command {
 }
 
 func (cmd *StatusCommand) Run(c *cli.Context) error {
+	startTime := time.Now()
+	verbose := c.Bool("verbose")
+
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
 		util.Warning("Warning: %s", err)
@@ -68,16 +78,29 @@ func (cmd *StatusCommand) Run(c *cli.Context) error {
 			StdOut: &bytes.Buffer{},
 		}
 
-		cmd.Git.Status(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
-			commandOnFinish[i] = onFinish
-			if !onFinish.Failed {
-				states[i].State = ui.StateSuccess
-				states[i].Msg = fmt.Sprintf("successfully retrieved status for %s", onFinish.Repo)
-			} else {
-				states[i].State = ui.StateError
-				states[i].Msg = fmt.Sprintf("failed to pull status for %s", onFinish.Repo)
-			}
-		})
+		if verbose {
+			cmd.Git.Status(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
+				commandOnFinish[i] = onFinish
+				if !onFinish.Failed {
+					states[i].State = ui.StateSuccess
+					states[i].Msg = fmt.Sprintf("successfully retrieved status for %s", onFinish.Repo)
+				} else {
+					states[i].State = ui.StateError
+					states[i].Msg = fmt.Sprintf("failed to get status for %s", onFinish.Repo)
+				}
+			})
+		} else {
+			cmd.Git.StatusPorcelain(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
+				commandOnFinish[i] = onFinish
+				if !onFinish.Failed {
+					states[i].State = ui.StateSuccess
+					states[i].Msg = fmt.Sprintf("successfully retrieved status for %s", onFinish.Repo)
+				} else {
+					states[i].State = ui.StateError
+					states[i].Msg = fmt.Sprintf("failed to get status for %s", onFinish.Repo)
+				}
+			})
+		}
 		return struct{}{}, nil
 	})
 
@@ -89,16 +112,37 @@ func (cmd *StatusCommand) Run(c *cli.Context) error {
 	}
 
 	finishPrint()
-	for _, onFinish := range commandOnFinish {
-		if !onFinish.Failed {
-			stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
-			stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
-			fmt.Printf("🟣 Status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
-		} else {
-			stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
-			stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
-			fmt.Printf("🔴 Failed to get status %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+	fmt.Println()
+
+	if verbose {
+		repoResults := make([]ui.RepoResult, len(repos))
+		for i, onFinish := range commandOnFinish {
+			repoResults[i] = ui.RepoResult{
+				Name:   repos[i].Name,
+				Stdout: onFinish.RunConfig.StdOut.String(),
+				Stderr: onFinish.RunConfig.StdErr.String(),
+				Failed: onFinish.Failed,
+			}
 		}
+		ui.RenderResults("", repoResults, startTime)
+	} else {
+		statusResults := make([]ui.RepoStatusResult, len(repos))
+		for i, onFinish := range commandOnFinish {
+			if onFinish.Failed {
+				statusResults[i] = ui.RepoStatusResult{Name: repos[i].Name, Failed: true}
+			} else {
+				summary := ui.ParsePorcelainV2(onFinish.RunConfig.StdOut.String())
+				if summary.Branch == "(detached)" {
+					fullPath := cmd.RepoUtils.FullPathWithRepo(repos[i].Path, repos[i].Name)
+					summary.State, summary.Progress = ui.DetectGitState(fullPath)
+				}
+				statusResults[i] = ui.RepoStatusResult{
+					Name:    repos[i].Name,
+					Summary: summary,
+				}
+			}
+		}
+		ui.RenderStatusTable(statusResults, startTime)
 	}
 	return nil
 }

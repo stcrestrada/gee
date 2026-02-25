@@ -8,10 +8,11 @@ import (
 	"gee/pkg/types"
 	"gee/pkg/ui"
 	"gee/pkg/util"
-	"github.com/pborman/indent"
+	"os"
+	"time"
+
 	"github.com/stcrestrada/gogo/v3"
 	"github.com/urfave/cli/v2"
-	"os"
 )
 
 type PullCommand struct {
@@ -39,6 +40,8 @@ func PullCmd() *cli.Command {
 }
 
 func (cmd *PullCommand) Run(c *cli.Context) error {
+	startTime := time.Now()
+
 	ctx, err := cmd.LoadConfiguration()
 	if err != nil {
 		util.Warning("Warning: %s \n", err)
@@ -87,14 +90,18 @@ func (cmd *PullCommand) Run(c *cli.Context) error {
 		util.Warning(res.Error.Error())
 	}
 	finishPrint()
-	os.Stdout.Write([]byte("\n\n"))
-	for _, onFinish := range commandOnFinish {
-		if onFinish.Failed {
-			stdout := indent.String("        ", onFinish.RunConfig.StdOut.String())
-			stderr := indent.String("        ", onFinish.RunConfig.StdErr.String())
-			fmt.Printf("🟡 Failed to pull %s \n    Stdout:\n%s\n    StdErr:\n%s\n", onFinish.Repo, stdout, stderr)
+	fmt.Println()
+
+	repoResults := make([]ui.RepoResult, len(repos))
+	for i, onFinish := range commandOnFinish {
+		repoResults[i] = ui.RepoResult{
+			Name:   repos[i].Name,
+			Stdout: onFinish.RunConfig.StdOut.String(),
+			Stderr: onFinish.RunConfig.StdErr.String(),
+			Failed: onFinish.Failed,
 		}
 	}
+	ui.RenderResults("pull", repoResults, startTime)
 	return nil
 }
 
