@@ -1,13 +1,13 @@
 module gee
 
-go 1.22.3
+go 1.25
 
 require (
 	github.com/fatih/color v1.10.0
 	github.com/go-playground/validator/v10 v10.4.1
 	github.com/pborman/indent v1.2.1
 	github.com/pelletier/go-toml v1.9.3
-	github.com/stcrestrada/gogo v1.0.0
+	github.com/stcrestrada/gogo/v3 v3.1.0
 	github.com/urfave/cli/v2 v2.3.0
 )
 

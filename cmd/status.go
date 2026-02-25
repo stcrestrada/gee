@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"gee/pkg/command"
 	"gee/pkg/types"
 	"gee/pkg/ui"
 	"gee/pkg/util"
 	"github.com/pborman/indent"
-	"github.com/stcrestrada/gogo"
+	"github.com/stcrestrada/gogo/v3"
 	"github.com/urfave/cli/v2"
 	"os"
 )
@@ -58,32 +59,29 @@ func (cmd *StatusCommand) Run(c *cli.Context) error {
 	finishPrint := ui.PrintSpinnerStates(os.Stdout, states)
 
 	concurrency := len(repos)
-	pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
+	pool := gogo.NewPool[struct{}](c.Context, concurrency, len(repos), func(ctx context.Context, i int) (struct{}, error) {
 		repo := repos[i]
-		return func() (interface{}, error) {
-			fullPath := cmd.RepoUtils.FullPathWithRepo(repo.Path, repo.Name)
+		fullPath := cmd.RepoUtils.FullPathWithRepo(repo.Path, repo.Name)
 
-			rc := &types.RunConfig{
-				StdErr: &bytes.Buffer{},
-				StdOut: &bytes.Buffer{},
-			}
-
-			cmd.Git.Status(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
-				commandOnFinish[i] = onFinish
-				if !onFinish.Failed {
-					states[i].State = ui.StateSuccess
-					states[i].Msg = fmt.Sprintf("successfully retrieved status for %s", onFinish.Repo)
-				} else {
-					states[i].State = ui.StateError
-					states[i].Msg = fmt.Sprintf("failed to pull status for %s", onFinish.Repo)
-				}
-			})
-			return nil, nil
+		rc := &types.RunConfig{
+			StdErr: &bytes.Buffer{},
+			StdOut: &bytes.Buffer{},
 		}
+
+		cmd.Git.Status(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
+			commandOnFinish[i] = onFinish
+			if !onFinish.Failed {
+				states[i].State = ui.StateSuccess
+				states[i].Msg = fmt.Sprintf("successfully retrieved status for %s", onFinish.Repo)
+			} else {
+				states[i].State = ui.StateError
+				states[i].Msg = fmt.Sprintf("failed to pull status for %s", onFinish.Repo)
+			}
+		})
+		return struct{}{}, nil
 	})
 
-	feed := pool.Go()
-	for res := range feed {
+	for res := range pool.Go() {
 		if res.Error == nil {
 			continue
 		}

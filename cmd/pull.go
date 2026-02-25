@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"gee/pkg/command"
 	"gee/pkg/types"
 	"gee/pkg/ui"
 	"gee/pkg/util"
 	"github.com/pborman/indent"
-	"github.com/stcrestrada/gogo"
+	"github.com/stcrestrada/gogo/v3"
 	"github.com/urfave/cli/v2"
 	"os"
 )
@@ -59,30 +60,27 @@ func (cmd *PullCommand) Run(c *cli.Context) error {
 	finishPrint := ui.PrintSpinnerStates(os.Stdout, states)
 
 	concurrency := len(repos)
-	pool := gogo.NewPool(concurrency, len(repos), func(i int) func() (interface{}, error) {
+	pool := gogo.NewPool[struct{}](c.Context, concurrency, len(repos), func(ctx context.Context, i int) (struct{}, error) {
 		repo := repos[i]
 		state := states[i]
-		return func() (interface{}, error) {
-			fullPath := cmd.RepoUtils.FullPathWithRepo(repo.Path, repo.Name)
-			err = cmd.RepoUtils.GetOrCreateDir(repo.Path)
-			if err != nil {
-				return nil, err
-			}
-
-			rc := &types.RunConfig{
-				StdErr: &bytes.Buffer{},
-				StdOut: &bytes.Buffer{},
-			}
-			cmd.Git.Pull(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
-				cmd.RepoUtils.HandlePullFinish(&repo, onFinish, state)
-				commandOnFinish[i] = onFinish
-			})
-			return nil, nil
+		fullPath := cmd.RepoUtils.FullPathWithRepo(repo.Path, repo.Name)
+		err = cmd.RepoUtils.GetOrCreateDir(repo.Path)
+		if err != nil {
+			return struct{}{}, err
 		}
+
+		rc := &types.RunConfig{
+			StdErr: &bytes.Buffer{},
+			StdOut: &bytes.Buffer{},
+		}
+		cmd.Git.Pull(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
+			cmd.RepoUtils.HandlePullFinish(&repo, onFinish, state)
+			commandOnFinish[i] = onFinish
+		})
+		return struct{}{}, nil
 	})
 
-	feed := pool.Go()
-	for res := range feed {
+	for res := range pool.Go() {
 		if res.Error == nil {
 			continue
 		}
