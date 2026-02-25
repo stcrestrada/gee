@@ -108,7 +108,7 @@ func (cmd *StatusCommand) Run(c *cli.Context) error {
 		if res.Error == nil {
 			continue
 		}
-		util.Warning(res.Error.Error())
+		util.Warning("%s", res.Error)
 	}
 
 	finishPrint()
