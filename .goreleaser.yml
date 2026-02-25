@@ -33,7 +33,7 @@ changelog:
   filters:
     exclude:
       - '^docs:'
-      - '^test:'# .goreleaser.yml
+      - '^test:'
 brews:
   - # Name template of the recipe
     # Default to project name
