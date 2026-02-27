@@ -2,9 +2,11 @@ package main
 
 import (
 	"gee/cmd"
+	"gee/pkg/tui"
 	"gee/pkg/util"
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-playground/validator/v10"
 	"github.com/urfave/cli/v2"
 )
@@ -40,6 +42,22 @@ func main() {
 		cmd.CloneCmd(),
 		cmd.RemoveCmd(),
 		cmd.ExecCmd(),
+	}
+
+	// No subcommand → launch interactive TUI
+	app.Action = func(c *cli.Context) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		config, err := util.NewConfigHelper().LoadConfig(cwd)
+		if err != nil {
+			return err
+		}
+		model := tui.NewAppModel(config)
+		p := tea.NewProgram(model, tea.WithAltScreen())
+		_, err = p.Run()
+		return err
 	}
 
 	// Run the CLI app

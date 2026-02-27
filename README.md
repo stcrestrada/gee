@@ -1,15 +1,17 @@
 # Gee: Efficiently Manage Multiple Git Repositories
 
-Gee is a powerful command-line tool designed to help you manage multiple git repositories seamlessly. It allows you to clone, pull, check the status, and run arbitrary commands across repositories listed in a `gee.toml` configuration file, leveraging concurrency for faster operations.
+Gee is a powerful tool for managing multiple git repositories. It features a full-screen interactive TUI (Terminal User Interface) with live status updates, Vim-style navigation, and one-key actions — plus a traditional CLI for scripting and automation. All operations run concurrently using a worker pool for speed.
+
+<!-- TODO: Screenshot — full dashboard view showing several repos with mixed status (clean, modified, ahead/behind) -->
 
 ## Features
 
-- **Clone**: Clone multiple repositories listed in the `gee.toml` file.
-- **Pull**: Pull changes from the main branch for all repositories.
-- **Status**: Compact summary view showing branch, ahead/behind, staged/modified/untracked counts per repo. Detects detached HEAD, rebase, merge, and cherry-pick states.
-- **Exec**: Run any shell command across all repos concurrently (e.g., `gee exec git push origin main`).
-- **Remove**: Remove repositories from the `gee.toml` configuration.
-- **Add**: Add repository to `gee.toml` configuration.
+- **Interactive Dashboard**: Run `gee` to launch a K9s-style full-screen TUI with live-updating repo status
+- **Vim Navigation**: `j`/`k` to move, `g`/`G` to jump, `/` to filter repos by name
+- **One-Key Actions**: `p` to pull, `e` to exec a command, `Enter` to open a shell in any repo
+- **Remote Discovery**: Press `d` to browse your GitHub/GitLab repos, multi-select, and batch-clone them
+- **CLI Mode**: All traditional commands (`gee status`, `gee pull`, `gee exec`, etc.) still work for scripting
+- **Concurrent Operations**: Every operation runs in parallel across all repos
 
 ## Installation
 
@@ -32,7 +34,69 @@ brew upgrade gee
 brew uninstall gee
 ```
 
-## Usage
+## Quick Start
+
+```shell
+# Create a config file
+gee init
+
+# Add repos from inside each repo directory
+cd path/to/repo && gee add
+
+# Launch the interactive dashboard
+gee
+```
+
+## Interactive TUI
+
+Run `gee` with no arguments to launch the interactive dashboard.
+
+<!-- TODO: Screenshot — dashboard showing the header, repo table with branch/sync/changes columns, and help bar at the bottom -->
+
+### Dashboard
+
+The dashboard shows all your repos in a live-updating table with:
+- Branch name (with rebase/merge/cherry-pick state detection)
+- Sync status (ahead/behind remote)
+- Change counts (staged, modified, untracked, conflicts)
+
+Status refreshes automatically every 5 seconds and after every action.
+
+### Keybindings
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Move cursor down / up |
+| `g` / `G` | Jump to first / last repo |
+| `p` | Pull the selected repo |
+| `P` | Pull all visible repos |
+| `e` | Open exec prompt — run any shell command in the selected repo |
+| `Enter` | Open a sub-shell in the selected repo's directory |
+| `r` | Manually refresh status |
+| `/` | Filter repos by name |
+| `d` | Open the Discovery view (requires `gh` or `glab`) |
+| `q` | Quit |
+
+<!-- TODO: Screenshot — dashboard with the exec prompt open (showing "exec> " at the bottom) -->
+
+### Discovery
+
+Press `d` to open the Discovery view, which lists your remote repositories from GitHub or GitLab.
+
+<!-- TODO: Screenshot — discovery view showing a list of remote repos with some selected (checkmarks) -->
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Move cursor down / up |
+| `Space` | Toggle selection on the current repo |
+| `Enter` | Clone all selected repos and add them to `gee.toml` |
+| `Esc` | Return to the dashboard |
+
+Discovery requires `gh` (GitHub CLI) or `glab` (GitLab CLI) to be installed. If neither is available, the `d` key is hidden from the help bar. GitHub is preferred when both are present.
+
+## CLI Commands
+
+All commands also work as traditional CLI subcommands for scripting and CI pipelines.
 
 ### Initialize Configuration
 Create an initial `gee.toml` configuration file:
@@ -120,6 +184,16 @@ Gee searches for `gee.toml` in the current and parent directories. If no configu
 
 ### What if Gee cannot find the gee.toml?
 Ensure that the `gee.toml` file exists in the current or parent directories. Use `gee init` to create a new configuration if needed.
+
+### Discovery doesn't show the `d` key
+Discovery requires `gh` (GitHub CLI) or `glab` (GitLab CLI). Install one:
+```shell
+brew install gh    # GitHub
+brew install glab  # GitLab
+```
+
+### The sub-shell opens but feels like a blank terminal
+The `Enter` key runs your `$SHELL` in the repo's directory. Type `exit` or `Ctrl-D` to return to the Gee dashboard.
 
 ## License
 
