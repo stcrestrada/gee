@@ -20,19 +20,31 @@ Gee is a powerful tool for managing multiple git repositories. It features a ful
 
 ## Installation
 
-Install Gee using Homebrew:
+### Homebrew (macOS / Linux)
+
 ```
 brew tap stcrestrada/gee
-
 brew install gee
 ```
 
-### Upgrade
+Upgrade:
+```
+brew update && brew upgrade gee
+```
+
+### Go Install (any platform)
 
 ```
-brew update
-brew upgrade gee
+go install github.com/stcrestrada/gee@latest
 ```
+
+Requires Go 1.21+.
+
+### Download Binary
+
+Grab the latest release for your platform from the [Releases page](https://github.com/stcrestrada/gee/releases). Extract and place the `gee` binary somewhere on your `PATH`.
+
+Available for: **macOS** (amd64, arm64), **Linux** (amd64, arm64), **Windows** (amd64).
 
 ### Uninstall
 ```
@@ -41,12 +53,33 @@ brew uninstall gee
 
 ### Shell Integration
 
-Add this to your `~/.zshrc` (or `~/.bashrc`):
+Add this to your shell config to enable **teleport** (`Enter` to `cd` into a repo):
+
+**Bash** (`~/.bashrc`) / **Zsh** (`~/.zshrc`):
 ```sh
 eval "$(gee --init)"
 ```
 
-This enables **teleport**: press `Enter` on any repo in the dashboard to instantly `cd` into it. Without this, the TUI will print the path but won't change your directory.
+**Fish** (`~/.config/fish/config.fish`):
+```fish
+gee --init | source
+```
+
+**PowerShell** (`$PROFILE`):
+```powershell
+function gee {
+  if ($args.Count -eq 0) {
+    $env:GEE_TELEPORT = "1"
+    $result = & gee.exe
+    $env:GEE_TELEPORT = $null
+    if ($result -and (Test-Path $result)) { Set-Location $result }
+  } else {
+    & gee.exe @args
+  }
+}
+```
+
+Without shell integration, the TUI will print the path but won't change your directory.
 
 ## Quick Start
 

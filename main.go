@@ -77,6 +77,11 @@ func main() {
 		// The shell wrapper function (from gee --init) will cd into it.
 		if m, ok := finalModel.(tui.AppModel); ok && m.SelectedPath != "" {
 			fmt.Fprintln(os.Stdout, m.SelectedPath)
+			if os.Getenv("GEE_TELEPORT") != "1" {
+				fmt.Fprintln(os.Stderr, "")
+				fmt.Fprintln(os.Stderr, "Tip: add this to your shell config to enable teleport (cd on Enter):")
+				fmt.Fprintln(os.Stderr, "  eval \"$(gee --init)\"")
+			}
 		}
 
 		return nil
@@ -120,7 +125,7 @@ func bashZshInit() string {
 	return `gee() {
   if [ $# -eq 0 ]; then
     local result
-    result="$(command gee)"
+    result="$(GEE_TELEPORT=1 command gee)"
     if [ -n "$result" ] && [ -d "$result" ]; then
       cd "$result" || return
     fi
@@ -134,7 +139,7 @@ func bashZshInit() string {
 func fishInit() string {
 	return `function gee
   if test (count $argv) -eq 0
-    set -l result (command gee)
+    set -l result (env GEE_TELEPORT=1 command gee)
     if test -n "$result" -a -d "$result"
       cd $result
     end
