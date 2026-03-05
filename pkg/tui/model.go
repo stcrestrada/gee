@@ -77,6 +77,9 @@ type AppModel struct {
 	// State
 	Refreshing bool
 	Scanning   bool
+
+	// Teleport — set when user presses Enter, read by main after Run()
+	SelectedPath string
 }
 
 // NewAppModel creates a ready-to-use AppModel from the cache.

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -211,20 +210,6 @@ func execRepoCmd(repo types.Repo, index int, userCmd string, repoUtils *util.Rep
 // tickCmd returns a tea.Cmd that fires a TickMsg after the refresh interval.
 func tickCmd() tea.Cmd {
 	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
-		return TickMsg{}
-	})
-}
-
-// openShellCmd suspends the TUI and opens the user's shell in the given directory.
-// On exit, it triggers a TickMsg to refresh status.
-func openShellCmd(dir string) tea.Cmd {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "sh"
-	}
-	c := exec.Command(shell)
-	c.Dir = dir
-	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return TickMsg{}
 	})
 }

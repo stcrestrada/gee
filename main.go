@@ -26,6 +26,10 @@ func main() {
 			Name:  "verbose",
 			Usage: "Enable verbose logging",
 		},
+		&cli.BoolFlag{
+			Name:  "init",
+			Usage: "Print shell integration function to stdout",
+		},
 	}
 
 	app.Before = func(c *cli.Context) error {
@@ -45,8 +49,13 @@ func main() {
 		cmd.ExecCmd(),
 	}
 
-	// No subcommand → launch interactive TUI
+	// No subcommand → launch interactive TUI (or handle --init)
 	app.Action = func(c *cli.Context) error {
+		if c.Bool("init") {
+			fmt.Print(shellInitScript())
+			return nil
+		}
+
 		cache := util.NewRepoCache()
 		if _, err := cache.Load(); err != nil {
 			return err
@@ -58,9 +67,19 @@ func main() {
 		}
 
 		model := tui.NewAppModel(cache)
-		p := tea.NewProgram(model, tea.WithAltScreen())
-		_, err := p.Run()
-		return err
+		p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithOutput(os.Stderr))
+		finalModel, err := p.Run()
+		if err != nil {
+			return err
+		}
+
+		// Teleport: if the user pressed Enter on a repo, print the path to stdout.
+		// The shell wrapper function (from gee --init) will cd into it.
+		if m, ok := finalModel.(tui.AppModel); ok && m.SelectedPath != "" {
+			fmt.Fprintln(os.Stdout, m.SelectedPath)
+		}
+
+		return nil
 	}
 
 	// Run the CLI app
@@ -83,6 +102,47 @@ func init() {
 	app.Name = "gee"
 	app.Usage = "Manage git repos from one place"
 	app.Version = version
+}
+
+// shellInitScript returns the shell function wrapper for the user's shell.
+// Users add `eval "$(gee --init)"` to their .zshrc/.bashrc.
+func shellInitScript() string {
+	shell := filepath.Base(os.Getenv("SHELL"))
+	switch shell {
+	case "fish":
+		return fishInit()
+	default:
+		return bashZshInit()
+	}
+}
+
+func bashZshInit() string {
+	return `gee() {
+  if [ $# -eq 0 ]; then
+    local result
+    result="$(command gee)"
+    if [ -n "$result" ] && [ -d "$result" ]; then
+      cd "$result" || return
+    fi
+  else
+    command gee "$@"
+  fi
+}
+`
+}
+
+func fishInit() string {
+	return `function gee
+  if test (count $argv) -eq 0
+    set -l result (command gee)
+    if test -n "$result" -a -d "$result"
+      cd $result
+    end
+  else
+    command gee $argv
+  end
+end
+`
 }
 
 // migrateFromGeeToml attempts a one-time import of repos from a gee.toml file.
@@ -135,6 +195,6 @@ func migrateFromGeeToml(cache *util.RepoCache) {
 
 	if imported > 0 {
 		cache.Save()
-		fmt.Printf("Migrated %d repos from gee.toml → cache.json\n", imported)
+		fmt.Fprintf(os.Stderr, "Migrated %d repos from gee.toml → cache.json\n", imported)
 	}
 }

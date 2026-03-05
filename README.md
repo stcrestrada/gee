@@ -10,7 +10,8 @@ Gee is a powerful tool for managing multiple git repositories. It features a ful
 - **Automatic Discovery**: Gee scans your home directory for git repos and streams them into the dashboard as they're found
 - **Pinned Repos**: Pin your important repos with `gee add` so they always show up first in the dashboard and CLI commands
 - **Vim Navigation**: `j`/`k` to move, `g`/`G` to jump, `/` to filter repos by name
-- **One-Key Actions**: `p` to pull, `e` to exec a command, `Enter` to open a shell in any repo
+- **Teleport**: Press `Enter` on any repo to instantly `cd` into it (requires shell integration)
+- **One-Key Actions**: `p` to pull, `e` to exec a command
 - **Remote Discovery**: Press `d` to browse your GitHub/GitLab repos, multi-select, and batch-clone them
 - **Staleness Detection**: Repos with dirty changes and no recent activity are flagged as `STALE`
 - **Context-Aware CLI**: Run `gee status` inside a repo to target just that repo, or use `--all` for everything
@@ -37,6 +38,15 @@ brew upgrade gee
 ```
 brew uninstall gee
 ```
+
+### Shell Integration
+
+Add this to your `~/.zshrc` (or `~/.bashrc`):
+```sh
+eval "$(gee --init)"
+```
+
+This enables **teleport**: press `Enter` on any repo in the dashboard to instantly `cd` into it. Without this, the TUI will print the path but won't change your directory.
 
 ## Quick Start
 
@@ -77,7 +87,7 @@ The header shows total repo count, pinned count, and a scanning indicator while 
 | `p` | Pull the selected repo |
 | `P` | Pull all visible repos |
 | `e` | Open exec prompt — run any shell command in the selected repo |
-| `Enter` | Open a sub-shell in the selected repo's directory |
+| `Enter` | Teleport — quit TUI and `cd` into the selected repo |
 | `r` | Manually refresh status |
 | `/` | Filter repos by name |
 | `d` | Open the Discovery view (requires `gh` or `glab`) |
@@ -109,6 +119,16 @@ Pin the current git repo so it shows up in the dashboard and CLI commands:
 ```
 cd path/to/repo
 gee add
+```
+
+Pin all git repos in the current directory:
+```
+gee add --all
+```
+
+Interactively select which repos to pin:
+```
+gee add --all-select
 ```
 
 ### Check Status
@@ -183,9 +203,6 @@ Discovery requires `gh` (GitHub CLI) or `glab` (GitLab CLI). Install one:
 brew install gh    # GitHub
 brew install glab  # GitLab
 ```
-
-### The sub-shell opens but feels like a blank terminal
-The `Enter` key runs your `$SHELL` in the repo's directory. Type `exit` or `Ctrl-D` to return to the Gee dashboard.
 
 ### Where is the cache stored?
 `~/.config/gee/cache.json`. You can inspect or edit it directly — it's plain JSON.

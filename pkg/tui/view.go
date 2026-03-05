@@ -338,7 +338,7 @@ func (m AppModel) viewDiscovery() string {
 }
 
 func (m AppModel) renderHelpBar() string {
-	keys := []string{"j/k:nav", "a:pin", "p:pull", "P:pull all", "e:exec", "↵:shell", "r:refresh", "/:filter"}
+	keys := []string{"j/k:nav", "a:pin", "p:pull", "P:pull all", "e:exec", "↵:cd", "r:refresh", "/:filter"}
 	if m.Discovery.Provider != "" {
 		keys = append(keys, "d:discover")
 	}

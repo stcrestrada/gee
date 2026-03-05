@@ -332,7 +332,8 @@ func (m AppModel) updateDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(filtered) > 0 && m.Cursor <= maxIdx {
 			r := filtered[m.Cursor]
 			fullPath := m.RepoUtils.FullPathWithRepo(r.row.Repo.Path, r.row.Repo.Name)
-			return m, openShellCmd(fullPath)
+			m.SelectedPath = fullPath
+			return m, tea.Quit
 		}
 
 	case "a":

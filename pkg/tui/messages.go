@@ -59,6 +59,12 @@ type CloneBatchDoneMsg struct {
 	Failed    int
 }
 
+// TeleportMsg signals the user pressed Enter on a repo to teleport there.
+// The TUI quits and main prints the path to stdout for the shell wrapper.
+type TeleportMsg struct {
+	Path string
+}
+
 // TickMsg triggers periodic status refresh.
 type TickMsg struct{}
 
