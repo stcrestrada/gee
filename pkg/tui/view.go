@@ -17,6 +17,8 @@ var (
 	styleAction    = lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Italic(true)
 	stylePrivate   = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	styleSelected  = lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
+	styleStale     = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Bold(true)
+	stylePinned    = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 	styleHelpBar   = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("245")).
 			Border(lipgloss.NormalBorder(), true, false, false, false).
@@ -37,9 +39,20 @@ func (m AppModel) viewDashboard() string {
 	var b strings.Builder
 
 	// --- Header ---
-	title := fmt.Sprintf(" gee — %d repos", len(m.Config.Repos))
+	pinnedCount := 0
+	for _, r := range m.Rows {
+		if r.Pinned {
+			pinnedCount++
+		}
+	}
+	title := fmt.Sprintf(" gee — %d repos", len(m.Rows))
+	if pinnedCount > 0 {
+		title += fmt.Sprintf(" (%d pinned)", pinnedCount)
+	}
 	header := styleHeader.Render(title)
-	if m.Refreshing {
+	if m.Scanning {
+		header += styleDim.Render("  ⟳ scanning...")
+	} else if m.Refreshing {
 		header += styleDim.Render("  ⟳ refreshing...")
 	}
 	b.WriteString(header + "\n\n")
@@ -52,7 +65,7 @@ func (m AppModel) viewDashboard() string {
 	}
 
 	// --- Table header ---
-	headerLine := fmt.Sprintf("  %-2s %-20s %-15s %-12s %s", "", "REPO", "BRANCH", "SYNC", "CHANGES")
+	headerLine := fmt.Sprintf("  %-2s %-2s %-20s %-15s %-12s %s", "", "", "REPO", "BRANCH", "SYNC", "CHANGES")
 	b.WriteString(styleTableHead.Render(headerLine) + "\n")
 
 	// --- Repo rows ---
@@ -93,8 +106,10 @@ func (m AppModel) viewDashboard() string {
 	if len(filtered) == 0 {
 		if m.Filter != "" {
 			b.WriteString(styleDim.Render("  no repos match filter") + "\n")
+		} else if m.Scanning {
+			b.WriteString(styleDim.Render("  no repos found — scanning...") + "\n")
 		} else {
-			b.WriteString(styleDim.Render("  no repos in gee.toml") + "\n")
+			b.WriteString(styleDim.Render("  no repos found — run gee add in a git repo to pin it") + "\n")
 		}
 	}
 
@@ -135,6 +150,12 @@ func renderDashboardRow(row RepoRow, selected bool) string {
 		cursor = styleCursor.Render("▸ ")
 	}
 
+	// Pin icon
+	pin := "  "
+	if row.Pinned {
+		pin = stylePinned.Render("* ")
+	}
+
 	// Status icon
 	var icon string
 	switch {
@@ -151,7 +172,7 @@ func renderDashboardRow(row RepoRow, selected bool) string {
 
 	// Action indicator (inline)
 	if row.Action != "" {
-		parts = append(parts, cursor+icon+"  "+name+"  "+styleAction.Render(row.Action))
+		parts = append(parts, cursor+pin+icon+"  "+name+"  "+styleAction.Render(row.Action))
 		return strings.Join(parts, "")
 	}
 
@@ -160,7 +181,7 @@ func renderDashboardRow(row RepoRow, selected bool) string {
 		if row.Failed {
 			status = "failed"
 		}
-		parts = append(parts, cursor+icon+"  "+name+"  "+styleDim.Render(status))
+		parts = append(parts, cursor+pin+icon+"  "+name+"  "+styleDim.Render(status))
 		return strings.Join(parts, "")
 	}
 
@@ -212,7 +233,13 @@ func renderDashboardRow(row RepoRow, selected bool) string {
 		changeDisplay = strings.Join(changes, " ")
 	}
 
-	return fmt.Sprintf("%s%s  %s  %s  %-12s  %s", cursor, icon, name, branchDisplay, syncDisplay, changeDisplay)
+	// Staleness badge
+	staleDisplay := ""
+	if s.Stale {
+		staleDisplay = " " + styleStale.Render("STALE")
+	}
+
+	return fmt.Sprintf("%s%s%s  %s  %s  %-12s  %s%s", cursor, pin, icon, name, branchDisplay, syncDisplay, changeDisplay, staleDisplay)
 }
 
 func (m AppModel) viewDiscovery() string {
@@ -311,7 +338,7 @@ func (m AppModel) viewDiscovery() string {
 }
 
 func (m AppModel) renderHelpBar() string {
-	keys := []string{"j/k:nav", "p:pull", "P:pull all", "e:exec", "↵:shell", "r:refresh", "/:filter"}
+	keys := []string{"j/k:nav", "a:pin", "p:pull", "P:pull all", "e:exec", "↵:shell", "r:refresh", "/:filter"}
 	if m.Discovery.Provider != "" {
 		keys = append(keys, "d:discover")
 	}

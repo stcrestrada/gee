@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,11 +26,17 @@ import (
 // When the channel closes, StatusRefreshDoneMsg is returned.
 //
 // This is the core gogo-to-bubbletea bridge pattern:
-//   1. gogo pool writes to chan StatusResultMsg
-//   2. tea.Cmd blocks reading one value from that channel
-//   3. Update processes the msg and returns another tea.Cmd to drain the next value
-//   4. When channel closes → StatusRefreshDoneMsg
+//  1. gogo pool writes to chan StatusResultMsg
+//  2. tea.Cmd blocks reading one value from that channel
+//  3. Update processes the msg and returns another tea.Cmd to drain the next value
+//  4. When channel closes -> StatusRefreshDoneMsg
 func refreshStatusCmd(repos []types.Repo, repoUtils *util.RepoUtils) (tea.Cmd, <-chan StatusResultMsg) {
+	if len(repos) == 0 {
+		ch := make(chan StatusResultMsg)
+		close(ch)
+		return waitForStatusResult(ch), ch
+	}
+
 	git := command.GitRepoOperation{}
 	ch := make(chan StatusResultMsg, len(repos))
 
@@ -55,6 +62,7 @@ func refreshStatusCmd(repos []types.Repo, repoUtils *util.RepoUtils) (tea.Cmd, <
 					if summary.Branch == "(detached)" {
 						summary.State, summary.Progress = ui.DetectGitState(fullPath)
 					}
+					summary.Stale = ui.CheckStaleness(fullPath, summary)
 					msg.Summary = summary
 				}
 			})
@@ -83,6 +91,77 @@ func waitForStatusResult(ch <-chan StatusResultMsg) tea.Cmd {
 		msg, ok := <-ch
 		if !ok {
 			return StatusRefreshDoneMsg{}
+		}
+		return msg
+	}
+}
+
+// refreshSingleRepoStatusCmd refreshes status for a single newly-discovered repo.
+func refreshSingleRepoStatusCmd(repo types.Repo, index int, repoUtils *util.RepoUtils) tea.Cmd {
+	return func() tea.Msg {
+		git := command.GitRepoOperation{}
+		fullPath := repoUtils.FullPathWithRepo(repo.Path, repo.Name)
+		rc := &types.RunConfig{
+			StdOut: &bytes.Buffer{},
+			StdErr: &bytes.Buffer{},
+		}
+		msg := StatusResultMsg{Index: index, Name: repo.Name}
+		git.StatusPorcelain(repo.Name, fullPath, rc, func(onFinish *types.CommandOnFinish) {
+			if onFinish.Failed {
+				msg.Failed = true
+			} else {
+				summary := ui.ParsePorcelainV2(rc.StdOut.String())
+				if summary.Branch == "(detached)" {
+					summary.State, summary.Progress = ui.DetectGitState(fullPath)
+				}
+				summary.Stale = ui.CheckStaleness(fullPath, summary)
+				msg.Summary = summary
+			}
+		})
+		return msg
+	}
+}
+
+// scanLocalReposCmd starts the background filesystem scanner and bridges
+// results into the bubbletea Update loop via a channel.
+func scanLocalReposCmd(cache *util.RepoCache) (tea.Cmd, <-chan RepoDiscoveredMsg) {
+	scanCh := util.ScanForRepos(context.Background(), util.ScannerConfig{
+		Root:     "", // defaults to ~
+		MaxDepth: 5,
+	})
+
+	outCh := make(chan RepoDiscoveredMsg, 32)
+	go func() {
+		for result := range scanCh {
+			cached := util.CachedRepo{
+				Name:         result.Name,
+				Path:         result.Path,
+				Remote:       result.Remote,
+				Pinned:       false,
+				DiscoveredAt: time.Now(),
+			}
+			if isNew := cache.Add(cached); isNew {
+				outCh <- RepoDiscoveredMsg{
+					Name:   result.Name,
+					Path:   result.Path,
+					Remote: result.Remote,
+				}
+			}
+		}
+		cache.Save()
+		close(outCh)
+	}()
+
+	return waitForDiscoveredRepo(outCh), outCh
+}
+
+// waitForDiscoveredRepo returns a tea.Cmd that reads one RepoDiscoveredMsg from
+// the channel. When the channel is closed it returns ScanDoneMsg.
+func waitForDiscoveredRepo(ch <-chan RepoDiscoveredMsg) tea.Cmd {
+	return func() tea.Msg {
+		msg, ok := <-ch
+		if !ok {
+			return ScanDoneMsg{}
 		}
 		return msg
 	}
@@ -229,11 +308,10 @@ func discoverGitLab() tea.Msg {
 }
 
 // cloneBatchCmd clones a set of remote repos using gogo, adds them to the
-// config, and returns a CloneBatchDoneMsg.
-func cloneBatchCmd(toClone []RemoteRepo, config *types.GeeContext, repoUtils *util.RepoUtils) tea.Cmd {
+// cache as pinned, and returns a CloneBatchDoneMsg.
+func cloneBatchCmd(toClone []RemoteRepo, cache *util.RepoCache, cloneDir string, repoUtils *util.RepoUtils) tea.Cmd {
 	return func() tea.Msg {
 		git := command.GitRepoOperation{}
-		configDir := config.ConfigFilePath
 		succeeded := 0
 		failed := 0
 
@@ -248,29 +326,31 @@ func cloneBatchCmd(toClone []RemoteRepo, config *types.GeeContext, repoUtils *ut
 					StdErr: &bytes.Buffer{},
 				}
 
-				// Extract repo name from "owner/name" → "name"
+				// Extract repo name from "owner/name" -> "name"
 				parts := strings.Split(remote.FullName, "/")
 				repoName := parts[len(parts)-1]
 
 				var cloneFailed bool
-				git.Clone(repoName, remote.CloneURL, configDir, rc, func(onFinish *types.CommandOnFinish) {
+				git.Clone(repoName, remote.CloneURL, cloneDir, rc, func(onFinish *types.CommandOnFinish) {
 					cloneFailed = onFinish.Failed
-					// "already exists" is not a real failure
 					if cloneFailed && strings.Contains(rc.StdErr.String(), "already exists") {
 						cloneFailed = false
 					}
 				})
 
+				repoPath := filepath.Join(cloneDir, repoName)
 				if cloneFailed {
 					failed++
 				} else {
 					succeeded++
-					// Add to config
-					config.Repos = append(config.Repos, types.Repo{
-						Name:   repoName,
-						Path:   configDir,
-						Remote: remote.CloneURL,
+					cache.Add(util.CachedRepo{
+						Name:         repoName,
+						Path:         repoPath,
+						Remote:       remote.CloneURL,
+						Pinned:       true,
+						DiscoveredAt: time.Now(),
 					})
+					cache.Pin(repoPath)
 				}
 				return struct{}{}, nil
 			},
@@ -278,9 +358,8 @@ func cloneBatchCmd(toClone []RemoteRepo, config *types.GeeContext, repoUtils *ut
 
 		pool.Wait()
 
-		// Save updated config
 		if succeeded > 0 {
-			util.NewConfigHelper().SaveConfig(config)
+			cache.Save()
 		}
 
 		return CloneBatchDoneMsg{Succeeded: succeeded, Failed: failed}

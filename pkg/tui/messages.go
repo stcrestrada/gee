@@ -61,3 +61,20 @@ type CloneBatchDoneMsg struct {
 
 // TickMsg triggers periodic status refresh.
 type TickMsg struct{}
+
+// RepoDiscoveredMsg is sent when the background scanner finds a new .git
+// directory that wasn't already in the cache.
+type RepoDiscoveredMsg struct {
+	Name   string
+	Path   string
+	Remote string
+}
+
+// ScanDoneMsg signals the filesystem scan is complete.
+type ScanDoneMsg struct{}
+
+// initScanChanMsg bootstraps the scanner channel into the model
+// (same pattern as initStatusChanMsg).
+type initScanChanMsg struct {
+	ch <-chan RepoDiscoveredMsg
+}

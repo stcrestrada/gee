@@ -18,6 +18,7 @@ type StatusSummary struct {
 	Modified  int
 	Untracked int
 	Conflicts int
+	Stale     bool // true if dirty with newest top-level file mtime > 7 days
 }
 
 // ParsePorcelainV2 parses `git status --porcelain=v2 --branch` output.
@@ -97,6 +98,36 @@ func DetectGitState(repoPath string) (state string, progress string) {
 	}
 
 	return "", ""
+}
+
+// CheckStaleness returns true if the repo has uncommitted changes and the
+// most recent top-level file's mtime is older than 7 days. This is a fast
+// heuristic — only top-level entries are checked, not a deep walk.
+func CheckStaleness(repoPath string, s StatusSummary) bool {
+	if s.Modified+s.Staged+s.Untracked == 0 {
+		return false
+	}
+	var newest time.Time
+	entries, err := os.ReadDir(repoPath)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if e.Name() == ".git" {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().After(newest) {
+			newest = info.ModTime()
+		}
+	}
+	if newest.IsZero() {
+		return false
+	}
+	return time.Since(newest) > 7*24*time.Hour
 }
 
 type RepoStatusResult struct {

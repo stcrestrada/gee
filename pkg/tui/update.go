@@ -2,9 +2,11 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"gee/pkg/util"
+	"gee/pkg/types"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -42,33 +44,41 @@ func (m *AppModel) startRefresh() tea.Cmd {
 	for i := range m.Rows {
 		m.Rows[i].Loading = true
 	}
-	cmd, ch := refreshStatusCmd(m.Config.Repos, m.RepoUtils)
+	repos := m.repoSlice()
+	cmd, ch := refreshStatusCmd(repos, m.RepoUtils)
 	m.StatusCh = ch
 	return cmd
 }
 
-// reloadConfig re-reads gee.toml from disk and rebuilds the row list.
-func (m *AppModel) reloadConfig() {
-	helper := util.NewConfigHelper()
-	config, err := helper.LoadConfig(m.Config.ConfigFilePath)
-	if err != nil {
-		m.ActionLog = append(m.ActionLog, fmt.Sprintf("reload config: %s", err))
+// reloadCache re-reads cache from disk and rebuilds the row list.
+func (m *AppModel) reloadCache() {
+	if _, err := m.Cache.Load(); err != nil {
+		m.ActionLog = append(m.ActionLog, fmt.Sprintf("reload cache: %s", err))
 		return
 	}
-	m.Config = config
+	cached := m.Cache.All()
 
-	// Rebuild rows, preserving status for repos that still exist.
-	oldByName := make(map[string]RepoRow, len(m.Rows))
+	// Preserve status for repos that still exist.
+	oldByPath := make(map[string]RepoRow, len(m.Rows))
 	for _, r := range m.Rows {
-		oldByName[r.Repo.Name] = r
+		fullPath := m.RepoUtils.FullPathWithRepo(r.Repo.Path, r.Repo.Name)
+		oldByPath[fullPath] = r
 	}
-	rows := make([]RepoRow, len(config.Repos))
-	for i, repo := range config.Repos {
-		if old, ok := oldByName[repo.Name]; ok {
-			old.Repo = repo
+	rows := make([]RepoRow, len(cached))
+	for i, c := range cached {
+		if old, ok := oldByPath[c.Path]; ok {
+			old.Pinned = c.Pinned
 			rows[i] = old
 		} else {
-			rows[i] = RepoRow{Repo: repo, Loading: true}
+			rows[i] = RepoRow{
+				Repo: types.Repo{
+					Name:   c.Name,
+					Path:   filepath.Dir(c.Path),
+					Remote: c.Remote,
+				},
+				Pinned:  c.Pinned,
+				Loading: true,
+			}
 		}
 	}
 	m.Rows = rows
@@ -89,6 +99,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Refreshing = true
 		return m, nil
 
+	// Bootstrap: store the scanner channel from Init.
+	case initScanChanMsg:
+		m.ScanCh = msg.ch
+		m.Scanning = true
+		return m, nil
+
 	// --- Status refresh stream ---
 	case StatusResultMsg:
 		if msg.Index >= 0 && msg.Index < len(m.Rows) {
@@ -107,6 +123,33 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StatusRefreshDoneMsg:
 		m.Refreshing = false
 		m.StatusCh = nil
+		return m, nil
+
+	// --- Scanner stream ---
+	case RepoDiscoveredMsg:
+		newRow := RepoRow{
+			Repo: types.Repo{
+				Name:   msg.Name,
+				Path:   filepath.Dir(msg.Path),
+				Remote: msg.Remote,
+			},
+			Pinned:  false,
+			Loading: true,
+		}
+		m.Rows = append(m.Rows, newRow)
+		newIndex := len(m.Rows) - 1
+
+		statusCmd := refreshSingleRepoStatusCmd(m.Rows[newIndex].Repo, newIndex, m.RepoUtils)
+		var nextScanCmd tea.Cmd
+		if m.ScanCh != nil {
+			nextScanCmd = waitForDiscoveredRepo(m.ScanCh)
+		}
+		return m, tea.Batch(statusCmd, nextScanCmd)
+
+	case ScanDoneMsg:
+		m.Scanning = false
+		m.ScanCh = nil
+		m.ActionLog = append(m.ActionLog, fmt.Sprintf("scan complete: %d repos", len(m.Rows)))
 		return m, nil
 
 	// --- Periodic refresh ---
@@ -166,8 +209,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case CloneBatchDoneMsg:
 		m.ActionLog = append(m.ActionLog,
 			fmt.Sprintf("clone: %d succeeded, %d failed", msg.Succeeded, msg.Failed))
-		m.reloadConfig()
-		// Switch back to dashboard and refresh.
+		m.reloadCache()
 		m.ActiveView = ViewDashboard
 		return m, m.startRefresh()
 
@@ -265,7 +307,6 @@ func (m AppModel) updateDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Cursor = maxIdx
 
 	case "p":
-		// Pull selected repo.
 		if len(filtered) > 0 && m.Cursor <= maxIdx {
 			r := filtered[m.Cursor]
 			m.Rows[r.origIndex].Action = "pulling..."
@@ -273,7 +314,6 @@ func (m AppModel) updateDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "P":
-		// Pull ALL visible repos.
 		var cmds []tea.Cmd
 		for _, r := range filtered {
 			m.Rows[r.origIndex].Action = "pulling..."
@@ -284,33 +324,45 @@ func (m AppModel) updateDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "e":
-		// Open exec prompt.
 		m.ExecActive = true
 		m.ExecInput.Focus()
 		return m, textinput.Blink
 
 	case "enter":
-		// Open sub-shell in selected repo.
 		if len(filtered) > 0 && m.Cursor <= maxIdx {
 			r := filtered[m.Cursor]
 			fullPath := m.RepoUtils.FullPathWithRepo(r.row.Repo.Path, r.row.Repo.Name)
 			return m, openShellCmd(fullPath)
 		}
 
+	case "a":
+		// Toggle pin on selected repo.
+		if len(filtered) > 0 && m.Cursor <= maxIdx {
+			r := filtered[m.Cursor]
+			fullPath := m.RepoUtils.FullPathWithRepo(r.row.Repo.Path, r.row.Repo.Name)
+			if m.Rows[r.origIndex].Pinned {
+				m.Cache.Unpin(fullPath)
+				m.Rows[r.origIndex].Pinned = false
+				m.ActionLog = append(m.ActionLog, fmt.Sprintf("unpinned %s", r.row.Repo.Name))
+			} else {
+				m.Cache.Pin(fullPath)
+				m.Rows[r.origIndex].Pinned = true
+				m.ActionLog = append(m.ActionLog, fmt.Sprintf("pinned %s", r.row.Repo.Name))
+			}
+			m.Cache.Save()
+		}
+
 	case "r":
-		// Manual refresh.
 		if !m.Refreshing {
 			return m, m.startRefresh()
 		}
 
 	case "/":
-		// Open filter.
 		m.Filtering = true
 		m.FilterInput.Focus()
 		return m, textinput.Blink
 
 	case "d":
-		// Switch to Discovery view.
 		if m.Discovery.Provider != "" {
 			m.ActiveView = ViewDiscovery
 			if len(m.Discovery.RemoteRepos) == 0 && !m.Discovery.Loading {
@@ -348,14 +400,11 @@ func (m AppModel) updateDiscovery(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "G":
 		m.Discovery.Cursor = maxIdx
 	case " ":
-		// Toggle selection.
 		m.Discovery.Selected[m.Discovery.Cursor] = !m.Discovery.Selected[m.Discovery.Cursor]
-		// Move cursor down for convenience.
 		if m.Discovery.Cursor < maxIdx {
 			m.Discovery.Cursor++
 		}
 	case "enter":
-		// Clone all selected repos.
 		var toClone []RemoteRepo
 		for i, sel := range m.Discovery.Selected {
 			if sel && i < len(m.Discovery.RemoteRepos) {
@@ -366,7 +415,8 @@ func (m AppModel) updateDiscovery(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.Discovery.Loading = true
-		return m, cloneBatchCmd(toClone, m.Config, m.RepoUtils)
+		cloneDir, _ := os.UserHomeDir()
+		return m, cloneBatchCmd(toClone, m.Cache, cloneDir, m.RepoUtils)
 	case "q":
 		return m, tea.Quit
 	}
@@ -375,7 +425,6 @@ func (m AppModel) updateDiscovery(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func truncate(s string, maxLen int) string {
-	// Take only the first line.
 	if idx := strings.IndexByte(s, '\n'); idx != -1 {
 		s = s[:idx]
 	}

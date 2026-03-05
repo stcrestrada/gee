@@ -2,115 +2,77 @@ package cmd
 
 import (
 	"fmt"
-	"gee/pkg/command"
-	"gee/pkg/types"
-	"gee/pkg/util"
-	"github.com/urfave/cli/v2"
 	"os"
-	"path/filepath"
+
+	"gee/pkg/util"
+
+	"github.com/urfave/cli/v2"
 )
 
-type RemoveCommand struct {
-	Git       command.GitRepoOperation
-	RepoUtils *util.RepoUtils
-}
-
-func NewRemoveCommand() *RemoveCommand {
-	repoOp := command.GitRepoOperation{}
-	return &RemoveCommand{
-		Git:       repoOp,
-		RepoUtils: util.NewRepoUtils(repoOp),
-	}
-}
-
 func RemoveCmd() *cli.Command {
-	removeCmd := NewRemoveCommand()
 	return &cli.Command{
 		Name:  "remove",
-		Usage: "remove repo in gee.toml",
+		Usage: "Unpin a repo",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "repo",
 				Aliases: []string{"r"},
-				Usage:   "specify the repository name to remove",
+				Usage:   "specify the repository name to unpin",
 			},
 		},
 		Action: func(c *cli.Context) error {
-			return removeCmd.Run(c)
+			cache := util.NewRepoCache()
+			if _, err := cache.Load(); err != nil {
+				return err
+			}
+
+			repoName := c.String("repo")
+
+			// If no name given, try to detect from cwd.
+			if repoName == "" {
+				cwd, err := os.Getwd()
+				if err != nil {
+					return err
+				}
+				if found, ok := cache.FindByPath(cwd); ok {
+					repoName = found.Name
+				}
+			}
+
+			if repoName == "" {
+				return util.NewWarning("please specify --repo <name> or run from inside a pinned repo")
+			}
+
+			// Find matching entry by name and unpin it.
+			all := cache.All()
+			var targetPath string
+			var wasPinned bool
+			for _, r := range all {
+				if r.Name == repoName {
+					targetPath = r.Path
+					wasPinned = r.Pinned
+					break
+				}
+			}
+
+			if targetPath == "" {
+				return util.NewWarning(fmt.Sprintf("%s not found in cache", repoName))
+			}
+
+			if wasPinned {
+				cache.Unpin(targetPath)
+			} else {
+				cache.Remove(targetPath)
+			}
+
+			if err := cache.Save(); err != nil {
+				return err
+			}
+
+			if wasPinned {
+				return util.NewInfo(fmt.Sprintf("unpinned %s", repoName))
+			}
+			return util.NewInfo(fmt.Sprintf("removed %s from cache", repoName))
 		},
 	}
-}
-
-func (cmd *RemoveCommand) Run(c *cli.Context) error {
-	var err error
-	repoName := c.String("repo")
-	if repoName == "" {
-		repoName, err = cmd.getRepoNameFromGitDir()
-		if err != nil {
-			return err
-		}
-		if repoName == "" {
-			return util.NewWarning("please specify the repository name to remove")
-		}
-	}
-	util.VerboseLog("attempting to remove %s from gee.toml", repoName)
-
-	// Load the configuration
-	geeCtx, err := cmd.LoadConfiguration()
-	if err != nil {
-		return err
-	}
-
-	var index *int
-	for i, repo := range geeCtx.Repos {
-		if repo.Name == repoName {
-			index = &i
-			break
-		}
-	}
-	if index == nil {
-		return util.NewWarning(fmt.Sprintf("%s not found in gee.toml", repoName))
-	}
-
-	repoLength := len(geeCtx.Repos)
-	// update repos list in configuration
-	geeCtx.Repos[repoLength-1], geeCtx.Repos[*index] = geeCtx.Repos[*index], geeCtx.Repos[repoLength-1]
-	geeCtx.Repos = geeCtx.Repos[:repoLength-1]
-
-	configHelper := util.NewConfigHelper()
-
-	err = configHelper.SaveConfig(geeCtx)
-	if err != nil {
-		return util.NewWarning(err.Error())
-	}
-	return util.NewInfo(fmt.Sprintf("successfully removed %s from gee.toml", repoName))
-}
-
-func (cmd *RemoveCommand) GetWorkingDirectory() (string, error) {
-	return os.Getwd()
-}
-
-func (cmd *RemoveCommand) LoadConfiguration() (*types.GeeContext, error) {
-	cwd, err := cmd.GetWorkingDirectory()
-	if err != nil {
-		return nil, err
-	}
-	return util.NewConfigHelper().LoadConfig(cwd)
-}
-
-// Get repository name from .git directory
-func (cmd *RemoveCommand) getRepoNameFromGitDir() (string, error) {
-	cwd, err := cmd.GetWorkingDirectory()
-	if err != nil {
-		return "", util.NewWarning(err.Error())
-	}
-	gitDir := filepath.Join(cwd, ".git")
-	exists, err := cmd.RepoUtils.FileExists(gitDir)
-	if err != nil {
-		return "", fmt.Errorf("error checking .git directory: %v", err)
-	}
-	if !exists {
-		return "", nil
-	}
-	return filepath.Base(cwd), nil
 }

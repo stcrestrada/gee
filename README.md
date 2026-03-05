@@ -7,10 +7,14 @@ Gee is a powerful tool for managing multiple git repositories. It features a ful
 ## Features
 
 - **Interactive Dashboard**: Run `gee` to launch a K9s-style full-screen TUI with live-updating repo status
+- **Automatic Discovery**: Gee scans your home directory for git repos and streams them into the dashboard as they're found
+- **Pinned Repos**: Pin your important repos with `gee add` so they always show up first in the dashboard and CLI commands
 - **Vim Navigation**: `j`/`k` to move, `g`/`G` to jump, `/` to filter repos by name
 - **One-Key Actions**: `p` to pull, `e` to exec a command, `Enter` to open a shell in any repo
 - **Remote Discovery**: Press `d` to browse your GitHub/GitLab repos, multi-select, and batch-clone them
-- **CLI Mode**: All traditional commands (`gee status`, `gee pull`, `gee exec`, etc.) still work for scripting
+- **Staleness Detection**: Repos with dirty changes and no recent activity are flagged as `STALE`
+- **Context-Aware CLI**: Run `gee status` inside a repo to target just that repo, or use `--all` for everything
+- **Zero Config**: No config files to maintain — Gee uses a JSON cache at `~/.config/gee/cache.json`
 - **Concurrent Operations**: Every operation runs in parallel across all repos
 
 ## Installation
@@ -37,15 +41,14 @@ brew uninstall gee
 ## Quick Start
 
 ```shell
-# Create a config file
-gee init
-
-# Add repos from inside each repo directory
+# Pin repos you care about
 cd path/to/repo && gee add
 
 # Launch the interactive dashboard
 gee
 ```
+
+Gee automatically discovers git repos under your home directory. Use `gee add` inside any repo to pin it — pinned repos appear first in the dashboard and are the default target for CLI commands.
 
 ## Interactive TUI
 
@@ -56,11 +59,13 @@ Run `gee` with no arguments to launch the interactive dashboard.
 ### Dashboard
 
 The dashboard shows all your repos in a live-updating table with:
+- Pin indicator (`*`) for pinned repos
 - Branch name (with rebase/merge/cherry-pick state detection)
 - Sync status (ahead/behind remote)
 - Change counts (staged, modified, untracked, conflicts)
+- `STALE` badge for repos with dirty changes and no recent file activity
 
-Status refreshes automatically every 5 seconds and after every action.
+The header shows total repo count, pinned count, and a scanning indicator while discovery is in progress. Status refreshes automatically every 5 seconds and after every action.
 
 ### Keybindings
 
@@ -68,6 +73,7 @@ Status refreshes automatically every 5 seconds and after every action.
 |-----|--------|
 | `j` / `k` | Move cursor down / up |
 | `g` / `G` | Jump to first / last repo |
+| `a` | Toggle pin on the selected repo |
 | `p` | Pull the selected repo |
 | `P` | Pull all visible repos |
 | `e` | Open exec prompt — run any shell command in the selected repo |
@@ -89,31 +95,24 @@ Press `d` to open the Discovery view, which lists your remote repositories from 
 |-----|--------|
 | `j` / `k` | Move cursor down / up |
 | `Space` | Toggle selection on the current repo |
-| `Enter` | Clone all selected repos and add them to `gee.toml` |
+| `Enter` | Clone all selected repos and pin them |
 | `Esc` | Return to the dashboard |
 
 Discovery requires `gh` (GitHub CLI) or `glab` (GitLab CLI) to be installed. If neither is available, the `d` key is hidden from the help bar. GitHub is preferred when both are present.
 
 ## CLI Commands
 
-All commands also work as traditional CLI subcommands for scripting and CI pipelines.
+All commands also work as traditional CLI subcommands for scripting and CI pipelines. Commands are **context-aware**: if you run them inside a cached repo, they target that repo. Otherwise, they target all pinned repos. Use `--all` to target every cached repo.
 
-### Initialize Configuration
-Create an initial `gee.toml` configuration file:
-
-```
-gee init
-```
-
-### Add Repository
-Add a repository to the `gee.toml` file. Must be run from inside a git repository:
+### Pin a Repository
+Pin the current git repo so it shows up in the dashboard and CLI commands:
 ```
 cd path/to/repo
 gee add
 ```
 
 ### Check Status
-Show a compact summary of all repos:
+Show a compact summary of your repos:
 ```
 gee status
 ```
@@ -130,28 +129,29 @@ For full `git status` output, use verbose mode:
 gee status --verbose
 ```
 
-### Pull Changes
-Pull changes for all repositories:
+Target all cached repos (not just pinned):
 ```
-gee pull
+gee status --all
 ```
 
-### Clone Repositories
-Clone all repositories listed in your `gee.toml` file:
-```shell
-gee clone
+### Pull Changes
+Pull changes for your repos:
+```
+gee pull
+gee pull --all
 ```
 
 ### Execute Commands
-Run any command across all repos concurrently:
+Run any command across repos concurrently:
 ```shell
 gee exec git push origin main
 gee exec git stash
 gee exec npm install
 gee exec "git stash && git pull && git stash pop"
+gee exec --all git fetch
 ```
 
-### Remove Repository
+### Unpin a Repository
 Automatically detect from the current directory:
 ```
 gee remove
@@ -164,26 +164,18 @@ gee remove -r repo_name
 gee remove --repo repo_name
 ```
 
-## Configuration
+## How It Works
 
-Manually configure `gee.toml`:
-```toml
-ConfigFile = "/path/to/gee/gee.toml"
-ConfigFilePath = "/path/to/gee"
+Gee stores all repo data in a JSON cache at `~/.config/gee/cache.json`. There are two types of repos:
 
-[[repos]]
-name = "repo_name"
-path = "/path/to/repo"
-remote = "https://github.com/user/repo.git"
-```
+- **Pinned**: Repos you've explicitly added with `gee add`. These are the default target for CLI commands and always appear first in the dashboard.
+- **Discovered**: Repos found automatically by scanning your filesystem. These appear in the dashboard but are not targeted by CLI commands unless you use `--all`.
 
-### Finding gee.toml
-Gee searches for `gee.toml` in the current and parent directories. If no configuration file is found, an error will be returned.
+### Migration from gee.toml
+
+If you're upgrading from an older version of Gee that used `gee.toml`, the first time you launch the TUI it will automatically import your repos from `gee.toml` into the cache as pinned repos. No manual migration is needed.
 
 ## FAQ and Troubleshooting
-
-### What if Gee cannot find the gee.toml?
-Ensure that the `gee.toml` file exists in the current or parent directories. Use `gee init` to create a new configuration if needed.
 
 ### Discovery doesn't show the `d` key
 Discovery requires `gh` (GitHub CLI) or `glab` (GitLab CLI). Install one:
@@ -194,6 +186,9 @@ brew install glab  # GitLab
 
 ### The sub-shell opens but feels like a blank terminal
 The `Enter` key runs your `$SHELL` in the repo's directory. Type `exit` or `Ctrl-D` to return to the Gee dashboard.
+
+### Where is the cache stored?
+`~/.config/gee/cache.json`. You can inspect or edit it directly — it's plain JSON.
 
 ## License
 

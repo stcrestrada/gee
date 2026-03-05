@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"path/filepath"
+
 	"gee/pkg/command"
 	"gee/pkg/types"
 	"gee/pkg/ui"
@@ -22,6 +24,7 @@ const (
 type RepoRow struct {
 	Repo    types.Repo
 	Status  ui.StatusSummary
+	Pinned  bool
 	Failed  bool
 	Loading bool
 	Action  string // "pulling...", "exec...", or ""
@@ -39,8 +42,8 @@ type DiscoveryModel struct {
 
 // AppModel is the root bubbletea model.
 type AppModel struct {
-	// Core
-	Config    *types.GeeContext
+	// Core — cache is the single source of truth
+	Cache     *util.RepoCache
 	RepoUtils *util.RepoUtils
 	Git       command.GitRepoOperation
 	Caps      Capabilities
@@ -49,11 +52,12 @@ type AppModel struct {
 	ActiveView View
 
 	// Dashboard
-	Rows      []RepoRow
-	Cursor    int
-	StatusCh  <-chan StatusResultMsg // held between Update calls to drain pool results
-	Filter    string
-	Filtering bool
+	Rows        []RepoRow
+	Cursor      int
+	StatusCh    <-chan StatusResultMsg
+	ScanCh      <-chan RepoDiscoveredMsg
+	Filter      string
+	Filtering   bool
 	FilterInput textinput.Model
 
 	// Exec overlay
@@ -63,7 +67,7 @@ type AppModel struct {
 	// Action log (recent results shown at bottom)
 	ActionLog []string
 
-	// Discovery
+	// Discovery (remote — gh/glab)
 	Discovery DiscoveryModel
 
 	// Terminal dimensions
@@ -72,16 +76,27 @@ type AppModel struct {
 
 	// State
 	Refreshing bool
+	Scanning   bool
 }
 
-// NewAppModel creates a ready-to-use AppModel from a loaded config.
-func NewAppModel(config *types.GeeContext) AppModel {
+// NewAppModel creates a ready-to-use AppModel from the cache.
+func NewAppModel(cache *util.RepoCache) AppModel {
 	git := command.GitRepoOperation{}
 	repoUtils := util.NewRepoUtils(git)
 
-	rows := make([]RepoRow, len(config.Repos))
-	for i, repo := range config.Repos {
-		rows[i] = RepoRow{Repo: repo, Loading: true}
+	// Seed rows from cache for instant startup.
+	cached := cache.All()
+	rows := make([]RepoRow, len(cached))
+	for i, c := range cached {
+		rows[i] = RepoRow{
+			Repo: types.Repo{
+				Name:   c.Name,
+				Path:   filepath.Dir(c.Path),
+				Remote: c.Remote,
+			},
+			Pinned:  c.Pinned,
+			Loading: true,
+		}
 	}
 
 	caps := DetectCapabilities()
@@ -95,7 +110,7 @@ func NewAppModel(config *types.GeeContext) AppModel {
 	execInput.CharLimit = 256
 
 	return AppModel{
-		Config:      config,
+		Cache:       cache,
 		RepoUtils:   repoUtils,
 		Git:         git,
 		Caps:        caps,
@@ -109,18 +124,28 @@ func NewAppModel(config *types.GeeContext) AppModel {
 	}
 }
 
-// Init kicks off the initial status refresh and periodic tick.
+// Init kicks off the initial status refresh, background scanner, and periodic tick.
 func (m AppModel) Init() tea.Cmd {
-	cmd, ch := refreshStatusCmd(m.Config.Repos, m.RepoUtils)
-	m.StatusCh = ch
-	m.Refreshing = true
-	// We cannot mutate m here (Init returns tea.Cmd, not tea.Model).
-	// So we use a wrapper cmd that sets the channel on first StatusResultMsg.
-	// Actually, bubbletea Init just returns a Cmd — we store ch via a
-	// bootstrap message instead.
-	return tea.Batch(cmd, tickCmd(), func() tea.Msg {
-		return initStatusChanMsg{ch: ch}
-	})
+	repos := m.repoSlice()
+	statusCmd, statusCh := refreshStatusCmd(repos, m.RepoUtils)
+	scanCmd, scanCh := scanLocalReposCmd(m.Cache)
+
+	return tea.Batch(
+		statusCmd,
+		scanCmd,
+		tickCmd(),
+		func() tea.Msg { return initStatusChanMsg{ch: statusCh} },
+		func() tea.Msg { return initScanChanMsg{ch: scanCh} },
+	)
+}
+
+// repoSlice extracts []types.Repo from the current row state.
+func (m *AppModel) repoSlice() []types.Repo {
+	repos := make([]types.Repo, len(m.Rows))
+	for i, r := range m.Rows {
+		repos[i] = r.Repo
+	}
+	return repos
 }
 
 // initStatusChanMsg is an internal message to hand the status channel to Update
