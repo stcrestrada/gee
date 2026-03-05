@@ -21,7 +21,7 @@ Gee is a powerful tool for managing multiple git repositories. It features a ful
 
 Install Gee using Homebrew:
 ```
-brew tap stcrestrada/gee https://github.com/stcrestrada/gee
+brew tap stcrestrada/gee
 
 brew install gee
 ```

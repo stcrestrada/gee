@@ -48,9 +48,7 @@ brews:
     # Gitea is not supported yet, but the support coming
     repository:
       owner: stcrestrada
-      name: gee
-      pull_request:
-        enabled: true
+      name: homebrew-gee
     # Template for the url which is determined by the given Token (github or gitlab)
     # Default for github is "https://github.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     # Default for gitlab is "https://gitlab.com/<repo_owner>/<repo_name>/-/releases/{{ .Tag }}/downloads/{{ .ArtifactName }}"
